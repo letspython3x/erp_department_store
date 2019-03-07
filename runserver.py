@@ -1,9 +1,7 @@
 from flask import Flask
 
-from flask_blueprints.customer import bp_customer
-from flask_blueprints.product import bp_product
-from flask_blueprints.quotation import bp_quotation
-from flask_blueprints.user import bp_user
+from auth_app import bp_user
+from quotation_app import bp_product, bp_customer, bp_quotation
 
 app = Flask(__name__)
 app.register_blueprint(bp_customer, url_prefix="/customer")
