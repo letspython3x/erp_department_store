@@ -1,6 +1,6 @@
 import json
 
-from flask import request, abort, Response, render_template
+from flask import request, abort, Response, render_template, url_for
 from flask_restplus import Resource, Api
 
 from quotation_app import bp_quotation, ValidateQuotationForm
@@ -15,22 +15,44 @@ class Quotation(Resource):
         if not request.json:
             abort(404)
         form_data = request.json
-        vf = ValidateQuotationForm(**form_data)
-        vf.validate()
+        # vf = ValidateQuotationForm(**form_data)
+        # vf.validate()
+        print(form_data)
 
-        payload = dict(Name='Abhi')
+        payload = dict(quotation_id=1,
+                       products=[
+                           {
+                               'product_name': 'p1',
+                           },
+                           {
+                               'product_name': 'p2',
+                           }
+                       ])
 
         payload = json.dumps(payload)
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=200, mimetype="application/json")
 
     def get(self):
-        payload = dict(Name='Abhi')
+        payload = dict(quotation_id=1,
+                       products=[
+                           {
+                               'product_name': 'p1',
+                           },
+                           {
+                               'product_name': 'p2',
+                           }
+                       ])
 
         payload = json.dumps(payload)
         logger.info("PAYLOAD SENT: %s" % payload)
-        # return Response(payload, status=200, mimetype="application/json")
-        return render_template('templates/base.html', title='Home', user='Abhi')
+        return Response(payload, status=200, mimetype="application/json")
+
+    def put(self):
+        return Response("{'status':'OK'}", status=200, mimetype="application/json")
+
+    def delete(self):
+        pass
 
 
 api.add_resource(Quotation, "/")

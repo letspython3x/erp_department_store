@@ -1,10 +1,11 @@
 from flask import Flask
 
-from auth_app import bp_user
-from quotation_app import bp_product, bp_customer, bp_quotation
 
-app = Flask(__name__)
-app.register_blueprint(bp_customer, url_prefix="/customer")
+from quotation_app import bp_product, bp_user, bp_quotation
+
+app = Flask(__name__) #, template_folder=r'templates')
+app.config.from_object('settings')
+
 app.register_blueprint(bp_quotation, url_prefix="/quotation")
 app.register_blueprint(bp_product, url_prefix="/product")
 app.register_blueprint(bp_user, url_prefix="/user")

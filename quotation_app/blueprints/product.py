@@ -27,5 +27,11 @@ class Product(Resource):
     def get(self):
         pass
 
+    def delete(self):
+        pass
+
+    def put(self):
+        pass
+
 
 api.add_resource(Product, "/")
