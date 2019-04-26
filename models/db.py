@@ -2,7 +2,7 @@ from boto3 import resource
 from boto3.dynamodb.conditions import Attr, Key, And
 from botocore.exceptions import ClientError
 
-from erp_department_store.utils.generic_utils import get_logger, get_app_config
+from utils.generic_utils import get_logger, get_app_config
 
 logger = get_logger(__name__)
 local_dynamo_db = get_app_config()["local_dynamo_db"]
@@ -50,43 +50,83 @@ class DbOperations(object):
             return tbl
 
     def get_total_records_count(self):
+        """
+        Returns Total number of records in the table/collection
+        :return: integer
+        """
         c = self.table.item_count
         logger.info(f"Total Items in {self.table} is {c}")
         return c
 
     def get_table_last_record(self, pk_key):
-        data = self.scan_table(pk_key)
+        """
+        Returns last record in the table, order by the primary key
+        :param pk_key: primary key
+        :return: a dictionary type object
+        """
+        data = self.scan_table(sort_by=pk_key)
         if data:
             logger.info(f"Returning Last Record")
             return data[-1]
 
-    def save_records(self, records, pk_key=None):
+    def add_new_records(self, records, pk_key=None):
+        """
+        Add new records in the system, will add new records only if
+        the primary key does not already exist.
+        :param records: dictionary type object, the record to be inserted
+        :param pk_key: primary key of the respective table
+        :return: Boolean True
+        """
         logger.info(f"Saving records in table: {self.table_name}")
-        logger.info(f"Record Type: {type(records)} \nRecords: {records}")
-
-        if isinstance(records, list) and len(records) >= 1:
-            # more than one items to save in db
-            for r in records:
-                pk_val = r.get(pk_key, None)
+        # logger.info(f"Record Type: {type(records)} \nRecords: {records}")
+        try:
+            if isinstance(records, list) and len(records) >= 1:
+                # more than one items to save in db
+                for r in records:
+                    pk_val = r.get(pk_key) if pk_key else ''
+                    self.table.put_item(
+                        Item=r,
+                        ConditionExpression=Attr(pk_key).ne(pk_val) if pk_key else ''
+                    )
+            else:
+                print(records)
+                pk_val = records.get(pk_key) if pk_key else ''
+                print(pk_val)
                 self.table.put_item(
-                    Item=r,
+                    Item=records,
                     ConditionExpression=Attr(pk_key).ne(pk_val) if pk_key else ''
                 )
-        else:
-            pk_val = records.get(pk_key, None)
+            logger.info(f"Records Saved Successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Records did not save !!!")
+            logger.error(f"{e}")
+
+    def update_record(self, record):
+        """
+        Updating an existing record is done by saving the existing record
+        again with new values.
+        :param record:  dictionary type object, the record to be updated
+        :return: Boolean True
+        """
+        try:
             self.table.put_item(
-                Item=records,
-                ConditionExpression=Attr(pk_key).ne(pk_val) if pk_key else ''
+                Item=record,
             )
-        logger.info(f"Records Saved Successfully")
+            logger.info(f"Record Updated Successfully !!!")
+            return True
+        except Exception as e:
+            logger.error(f"Records did not update !!!")
+            logger.error(f"{e}")
 
     def delete(self, pk_key, pk_val):
         """
         Delete the item from a table on the basis of its Primary Key
         :param pk_key: Primary Key of the table
         :param pk_val: Value of the Key to delete
-        :return: True
+        :return: Boolean True
         """
+        logger.info(f"Deleting the record, ID: {pk_val}")
         self.table.delete_item(Key={pk_key: pk_val})
         return True
 
@@ -100,8 +140,9 @@ class DbOperations(object):
         if isinstance(query_params, dict):
             for pk_key, pk_value in query_params.items():
                 key_exp = Key(pk_key).eq(pk_value)
+                print(key_exp)
         else:
-            raise RuntimeError(f"Invalid Query Parameters provided {query_params}")
+            raise RuntimeError(f"Pass Query Parameters as a dictionary {query_params}")
         try:
             response = self.table.query(
                 KeyConditionExpression=key_exp

@@ -1,11 +1,13 @@
 from datetime import datetime, date
 from decimal import Decimal
 
-from db import DbOperations
 from werkzeug.utils import cached_property
 
-from erp_department_store.utils.generic_utils import get_logger
+from models.db import DbOperations
+from utils.generic_utils import get_logger
+from datetime import datetime
 
+TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
@@ -17,7 +19,6 @@ class BaseModel(object):
     def __init__(self, table_name):
         logger.info("Initializing Base Model...")
         self.db = DbOperations(table_name)
-        self.pk_key = None
         self.table = self.db.table
 
     @cached_property
@@ -30,28 +31,29 @@ class BaseModel(object):
         # Dictionary Type data is returned
         return record
 
-    def search_by_id(self, pk_key, pk_value):
+    def search_by_id(self, pk_key, pk_val):
+        logger.info(f"Query: Searching by ID...")
         query = {
-            pk_key: pk_value
+            pk_key: pk_val
         }
         # return 0 because it returns a list
-        record = self.db.search_by_key(query)[0]
+        record = self.db.search_by_key(query)
         if record:
             logger.info(f"Query: {query} \n Record Found: {record}")
+            return record[0]
         else:
             logger.info(f"Query: {query} \n Record Does Not Exist")
-        return record
 
 
-class Quotation(BaseModel):
-    def __init__(self, quotation_set=None):
-        super(Quotation, self).__init__(table_name='Quotation')
+class QuotationModel(BaseModel):
+    def __init__(self, quotation=None):
+        super(QuotationModel, self).__init__(table_name='Quotation')
         logger.info("Initializing Quotation...")
-        self.quotation_products, self.quotation_total = self.parse(quotation_set)
+        # self.quotation_products, self.quotation_total = self.parse(quotation) if quotation else ('', '')
+        self.quotation = quotation
         self.table_name = 'Quotation'
         self.pk_key = 'quotation_id'
-        self.create_time = str(datetime.now())
-
+        self.create_at = str(datetime.now())
 
     @cached_property
     def quotation_id(self):
@@ -59,11 +61,19 @@ class Quotation(BaseModel):
 
         :return: The Last Quotation Saved in DB, to generate a new Quotation ID
         """
-        id = 1
-        if self.last_record:
-            print(f"LAST RECORD Found: {self.last_record}")
-            id = int(self.last_record[self.pk_key]) + 1
-        return id
+        last_id = self.get_last_quotation_id()
+        new_id = last_id + 1 if last_id else 1
+        return new_id
+
+    def get_last_quotation_id(self):
+        last_id = int(self.last_record[self.pk_key])
+        if isinstance(last_id, int):
+            return last_id
+        else:
+            return 0
+
+    def generate_new_quotation_id(self):
+        return self.quotation_id
 
     def search_by_email(self, customer_email):
         logger.info(f"Searching Quotation via Customer Email {customer_email}...")
@@ -81,26 +91,76 @@ class Quotation(BaseModel):
         record = self.db.search_by_attributes(query)
         return record
 
-    def save(self, customer_id):
+    @staticmethod
+    def fetch_customer_details(quotation):
+        c = dict(customer_phone=quotation.get("customer_phone"),
+                 customer_email=quotation.get("customer_email"),
+                 customer_name=quotation.get("customer_name"))
+        return c
+
+    def fetch_quotation_metadata(self, quotation):
+        md = dict(store_id=quotation.get("store_id"),
+                  user_id=quotation.get("user_id"),
+                  total=quotation.get("total"),
+                  created_at=TIMESTAMP().strftime("%d-%m-%Y %H:%M:%S")
+                  )
+        customer = self.fetch_customer_details(quotation)
+        md.update(customer)
+        return md
+
+    @staticmethod
+    def fetch_quoted_products(quotation):
+        products = quotation.get("products")
+        qp = []  # quoted products
+
+        for product in products:
+            if product is not None:
+                temp = dict(
+                    name=product.get("name"),
+                    category=product.get("category"),
+                    quoted_price=Decimal(str(product.get("quoted_price"))),
+                    quantity=Decimal(product.get("quantity")),
+                    sub_total=Decimal(product.get("sub_total"))
+                )
+                qp.append(temp)
+        return qp
+
+    def create(self):
         """
-        saves the customer if it does not exist, after incrementing the last customer's id
+        save the quotation details after fetching customer details and
+        products list details, with a new dynamically generated quotation_id.
         :return: None
         """
-        print(f"Customer ID to be attached: {customer_id}")
-        customer = Customer().search_by_id(pk_key='customer_id', pk_value=customer_id)
-        print(f"Customer: {customer}")
-        if customer_id and self.quotation_id:
-            record = dict(
-                customer_id=customer_id,
-                quotation_id=self.quotation_id,
-                quotation_total=Decimal(str(self.quotation_total)),
-                customer_name=f"{customer.get('first_name')} {customer.get('last_name')}",
-                customer_phone=customer.get('phone'),
-                customer_email=customer.get('email'),
-                create_time=str(date.today()),
-                quotation_items=self.quotation_products,
-            )
-            self.db.save_records(record, pk_key=self.pk_key)
+        new_quotation_id = self.generate_new_quotation_id()
+        md = self.fetch_quotation_metadata(self.quotation)
+        products = self.fetch_quoted_products(self.quotation)
+
+        record = dict(quotation_id=new_quotation_id)
+        record.update(dict(products=products))
+        record.update(md)
+        is_added = self.db.add_new_records(record, pk_key=self.pk_key)
+        return is_added
+
+    # def create(self, customer_id):
+    #     """
+    #     saves the customer if it does not exist, after incrementing the last customer's id
+    #     :return: None
+    #     """
+    #     print(f"Customer ID to be attached: {customer_id}")
+    #     customer = CustomerModel().search_by_id(pk_key='customer_id', pk_val=customer_id)
+    #     print(f"Customer: {customer}")
+    #     if customer_id and self.quotation_id:
+    #         record = dict(
+    #             customer_id=customer_id,
+    #             quotation_id=self.quotation_id,
+    #             quotation_total=Decimal(str(self.quotation_total)),
+    #             customer_name=f"{customer.get('first_name')} {customer.get('last_name')}",
+    #             customer_phone=customer.get('phone'),
+    #             customer_email=customer.get('email'),
+    #             create_time=str(date.today()),
+    #             quotation_items=self.quotation_products,
+    #         )
+    #         self.db.add_new_records(record, pk_key=self.pk_key)
 
     @staticmethod
     def products_form_to_dict(product_form_set):
@@ -111,13 +171,14 @@ class Quotation(BaseModel):
         """
         quotation_products = []
         for product in product_form_set:
-            if product.cleaned_data.get('product_name'):
+            print(product)
+            if product.get('product_name'):
                 temp = dict(
-                    product_name=product.cleaned_data.get('product_name'),
-                    category=product.cleaned_data.get('product_category'),
-                    quoted_price=Decimal(str(product.cleaned_data.get('quoted_price'))),
-                    quantity=Decimal(product.cleaned_data.get('quantity')),
-                    serial_no=product.cleaned_data.get('serial_no')
+                    product_name=product.get('product_name'),
+                    category=product.get('product_category'),
+                    quoted_price=Decimal(str(product.get('quoted_price'))),
+                    quantity=Decimal(product.get('quantity')),
+                    serial_no=product.get('serial_no')
                 )
                 quotation_products.append(temp)
         return quotation_products
@@ -126,11 +187,11 @@ class Quotation(BaseModel):
     def parse(product_form_set):
         """
         Parse & Save the Quotation Form Set
-        :param items: Product Form Set
+        :param product_form_set: Product Form Set
         :return: list of dictionary of items
         """
-        product_obj = Product()
-        quotation_products = Quotation.products_form_to_dict(product_form_set)
+        product_obj = ProductModel()
+        quotation_products = product_form_set["products"]
         products_list = []
         quotation_total = 0
         for product in quotation_products:
@@ -148,7 +209,7 @@ class Quotation(BaseModel):
                 # with the quoted_price value
                 product['price'] = product['quoted_price']
                 del product['quoted_price']
-                _p = Product(product)
+                _p = ProductModel(product)
                 _p.save()
                 product['product_id'] = _p.product_id
             product['sub_total'] = Decimal(str(sub_total))
@@ -159,28 +220,23 @@ class Quotation(BaseModel):
         return products_list, quotation_total
 
 
-class Product(BaseModel):
+class ProductModel(BaseModel):
     def __init__(self, product=None):
-        super(Product, self).__init__(table_name='Product')
+        super(ProductModel, self).__init__(table_name='Product')
         logger.info("Initializing Product...")
-        if product:
-            print("Initiating Product config...")
-            self.name = product.get('product_name')
-            self.category = product.get('category')
-            self.price = product.get('price')
-            self.serial_no = product.get("serial_no") or "-9999"
-            # self.validate()
-
         self.table_name = 'Product'
         self.pk_key = 'product_id'
-
-    def validate(self):
-        assert isinstance(self.name, str)
-        assert isinstance(self.category, str)
-        assert isinstance(self.price, Decimal)
-        print(self.serial_no)
-        print(type(self.serial_no))
-        assert isinstance(self.serial_no, str)
+        if product:
+            logger.info("Initiating Product config...")
+            self.product_name = product.get('name')
+            self.category = product.get('category')
+            self.cost_price = product.get('cost_price')
+            self.sell_price = product.get('sell_price')
+            self.quantity = product.get('quantity')
+            self.distributor = product.get('distributor')
+            self.description = product.get('description')
+            self.is_active = product.get("is_active", 1)
+            self.quantity = product.get("quantity", 0)
 
     @cached_property
     def product_id(self):
@@ -190,42 +246,125 @@ class Product(BaseModel):
             return product_id
 
     def search_by_name(self, product_name=None):
-        if product_name or self.name:
+        if product_name or self.product_name:
             query = {
-                'product_name': product_name or self.name
+                'name': product_name or self.product_name
             }
             record = self.db.search_by_attributes(query)
             return record
 
-    def save(self):
+    def create(self):
         """
-        saves the customer if it does not exist, after incrementing the last customer's id
+        saves the product if it does not exist, after incrementing the last product's id
         :return: None
         """
         product_id = self.product_id
         if not product_id:
             logger.info(f"Saving the New Product...")
             product_id = int(self.last_record[self.pk_key]) + 1
+
             logger.info(f"New Product ID: {product_id}")
+            print(f"{product_id} {self.product_name} {self.category} {self.cost_price}")
             record = dict(
-                product_id=product_id,
-                name=self.name,
+                product_id=Decimal(str(product_id)),
+                name=self.product_name,
                 category=self.category,
-                price=Decimal(str(self.price)),
-                serial_no=self.serial_no
+                description=self.description,
+                distributor=self.distributor,
+                cost_price=Decimal(str(self.cost_price)),
+                sell_price=Decimal(str(self.sell_price)),
+                is_active=Decimal(str(int(self.is_active))),
+                quantity=self.quantity
             )
-            self.db.save_records(record, pk_key=self.pk_key)
-            logger.info(f"New Product Saved Successfully; ID: {self.product_id}")
+            # self.db.save_records(record, pk_key=self.pk_key)
+            self.db.add_new_records(record, pk_key='name')
+            logger.info(f"New Product Saved Successfully; ID: {product_id}")
         else:
             # Verify all the fields are matching
-            print(f"Product present, Product ID: {self.product_id}")
+            logger.info(f"Product already present, Product ID: {self.product_id}")
+            logger.info(f"Updating the old Product...")
+            self.update(product_id, self.product_name, self.category, self.cost_price, self.sell_price, self.is_active,
+                        self.quantity, self.description, self.distributor)
         return product_id
 
+    def update(self, product_id, product_name=None, category=None, cost_price=None, sell_price=None,
+               is_active=None, quantity=None, description=None, distributor=None):
+        """
+        update the corresponding values of the product,
+        by saving the old with new values.
+        :return: True
+        """
+        # product = self.search_by_id(pk_key='product_id', pk_val=product_id)
+        record = dict(
+            product_id=product_id,
+            name=product_name,
+            category=category,
+            description=description,
+            distributor=distributor,
+            cost_price=Decimal(str(cost_price)),
+            sell_price=Decimal(str(sell_price)),
+            is_active=is_active,
+            quantity=quantity
+        )
+        is_updated = self.db.update_record(record)
+        if is_updated:
+            logger.info(f"UPDATE Product SUCCESS: ID: {product_id}")
+            return is_updated
+        logger.info(f"UPDATE Product FAILURE: ID: {product_id}")
 
-class Customer(BaseModel):
+    def update_details(self, product_id, new_data):
+        existing_record = self.search_by_id(pk_key='product_id', pk_val=product_id)
+
+        product_name = new_data.get('name') or existing_record.get('name')
+        category = new_data.get('category') or existing_record.get('category')
+        distributor = new_data.get('distributor') or existing_record.get('distributor')
+        description = new_data.get('description') or existing_record.get('description')
+        cost_price = new_data.get('cost_price') or existing_record.get('cost_price')
+        sell_price = new_data.get('sell_price') or existing_record.get('sell_price')
+        is_active = new_data.get('is_active') or existing_record.get('is_active')
+        quantity = new_data.get('quantity') or existing_record.get('quantity')
+
+        self.update(product_id, product_name, category, cost_price, sell_price, is_active, quantity, description,
+                    distributor)
+
+    def deactivate(self, product):
+        """
+        Delete will only mark a product as in active,
+        by putting is_active=0
+        :param id:
+        :return:
+        """
+        # self.db.delete(self.pk_key, int(id))
+        return self.switch_active_flag(product, is_active=0)
+
+    def activate(self, product):
+        return self.switch_active_flag(product, is_active=1)
+
+    def switch_active_flag(self, product, is_active):
+        product_id = product.get('product_id')
+        product_name = product.get('name')
+        category = product.get('category')
+        cost_price = product.get('cost_price')
+        sell_price = product.get('sell_price')
+        quantity = product.get('quantity')
+        distributor = product.get('distributor')
+        description = product.get('description')
+        is_active = is_active
+        print(f"{product_id}, {product_name}, {category}, {cost_price}, {is_active}, {quantity}, {distributor}")
+        is_updated = self.update(product_id, product_name, category, cost_price, sell_price, is_active, quantity,
+                                 description, distributor)
+
+        return is_updated
+
+    def fetch_all_products(self):
+        records = self.db.scan_table(self.pk_key)
+        return records
+
+
+class CustomerModel(BaseModel):
     def __init__(self, customer=None):
         logger.info("Initializing Customer...")
-        super(Customer, self).__init__(table_name='Customer')
+        super(CustomerModel, self).__init__(table_name='Customer')
         if customer:
             print("Initiating Customer config...")
             self.first_name = customer.get('first_name').lower()
@@ -312,7 +451,7 @@ class Customer(BaseModel):
                 country=self.country or '(null)',
                 postal_code=self.postal_code or '(null)'
             )
-            self.db.save_records(record, pk_key=self.pk_key)
+            self.db.add_new_records(record, pk_key=self.pk_key)
             logger.info(f"New Customer Saved successfully; ID:{customer_id}")
         else:
             # Verify all the fields are matching
