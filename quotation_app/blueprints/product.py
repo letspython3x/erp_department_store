@@ -1,12 +1,14 @@
 import simplejson as json
 
 from flask import request, abort, Response
+from flask_cors import CORS, cross_origin
 from flask_restplus import Resource, Api
 from . import ProductModel
 from quotation_app import bp_product, ValidateProduct
 from utils.generic_utils import get_logger
 
 logger = get_logger(__name__)
+CORS(bp_product, support_credentials=True, resources={r"/foo": {"origins": "http://localhost:4200"}})
 api = Api(bp_product)
 
 
@@ -18,6 +20,7 @@ class BulkProduct(Resource):
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=200, mimetype="application/json")
 
+    @cross_origin(origin='localhost')
     def put(self):
         status = 404
         if not request.json:
@@ -65,6 +68,7 @@ class Product(Resource):
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
+    @cross_origin(origin='localhost', supports_credentials=True)
     def delete(self, product_name):
         if not request.json:
             abort(404)
@@ -89,6 +93,7 @@ class Product(Resource):
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
+    @cross_origin(origin='localhost', supports_credentials=True)
     def post(self, product_name):
         """
         Will update the details of a product
