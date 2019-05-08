@@ -1,75 +1,101 @@
 import simplejson as json
-
 from flask import request, abort, Response
-from flask_cors import CORS, cross_origin
 from flask_restplus import Resource, Api
-from . import ProductModel
+
 from quotation_app import bp_product, ValidateProduct
 from utils.generic_utils import get_logger
+from . import ProductModel
 
 logger = get_logger(__name__)
-CORS(bp_product, support_credentials=True, resources={r"/foo": {"origins": "http://localhost:4200"}})
 api = Api(bp_product)
 
 
-class BulkProduct(Resource):
+# class BulkProduct(Resource):
+#     def get(self):
+#         pm = ProductModel()
+#         data = pm.fetch_all()
+#         payload = json.dumps(data)
+#         logger.info("PAYLOAD SENT: %s" % payload)
+#         return Response(payload, status=200, mimetype="application/json")
+#
+#     def post(self):
+#         status = 404
+#         if not request.json:
+#             abort(status)
+#         product = request.json
+#         try:
+#             vf = ValidateProduct(product)
+#             if vf.validate():
+#                 # single product
+#                 p = ProductModel(product)
+#                 product_id = p.create()
+#                 data = {
+#                     "name": p.product_name,
+#                     "product_id": product_id
+#                 }
+#                 status = 200
+#         except AssertionError as ae:
+#             data = dict(message="Please check the product details")
+#             print(ae)
+#         except Exception as e:
+#             data = dict(message="Unable to Add product")
+#             logger.error(e)
+#
+#         payload = json.dumps(data)
+#         logger.info("PAYLOAD SENT: %s" % payload)
+#         return Response(payload, status=status, mimetype="application/json")
+#
+
+class Product(Resource):
     def get(self):
+        status = 200
+        product_id = request.args.get('product_id', 0)
+        name = request.args.get('name', None)
+        serial_no = request.args.get('serial_no', None)
+
         pm = ProductModel()
-        data = pm.fetch_all_products()
+        if product_id != 0:
+            data = pm.search_by_id('product_id', int(product_id))
+        elif name is not None:
+            data = pm.search_by_name(name)
+        elif serial_no is not None:
+            data = pm.search_by_serial_no(serial_no)
+        else:
+            data = pm.fetch_all()
+
+        # print(data)
+        if data is None:
+            data = {
+                "message": "No records found",
+            }
+
         payload = json.dumps(data)
         logger.info("PAYLOAD SENT: %s" % payload)
-        return Response(payload, status=200, mimetype="application/json")
+        return Response(payload, status=status, mimetype="application/json")
 
-    @cross_origin(origin='localhost')
-    def put(self):
+    def post(self):
         status = 404
         if not request.json:
             abort(status)
         product = request.json
-
-        print("Received req: %s" % product)
-        print("Received req: %s" % request)
-        try:
-            vf = ValidateProduct(product)
-            if vf.validate():
-                # single product
-                p = ProductModel(product)
-                product_id = p.create()
-                data = {
-                    "name": p.product_name,
-                    "product_id": product_id
-                }
-                status = 200
-        except AssertionError as ae:
-            data = dict(message="Please check the product details")
-            print(ae)
-        except Exception as e:
-            data = dict(message="Unable to Add product")
-            logger.error(e)
-
-        payload = json.dumps(data)
-        logger.info("PAYLOAD SENT: %s" % payload)
-        return Response(payload, status=status, mimetype="application/json")
-
-
-class Product(Resource):
-    def get(self, product_name):
-        status = 404
-        pm = ProductModel()
-        # data = pm.search_by_name(product_name)
-        data = pm.search_by_id('product_id', int(product_name)) or pm.search_by_name(product_name)
-        # print(data)
-        if data:
+        product_id = None
+        vf = ValidateProduct(product)
+        if vf.validate():
+            # single product
+            p = ProductModel(product)
+            product_id = p.create()
+            message = "Product added Successfully"
             status = 200
         else:
-            data = dict(message="Invalid Product name or ID")
+            message = "Please check the product details"
 
+        data = dict(product_id=product_id,
+                    message=message)
         payload = json.dumps(data)
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
-    @cross_origin(origin='localhost', supports_credentials=True)
-    def delete(self, product_name):
+    def delete(self):
         if not request.json:
             abort(404)
         product_id = request.json.get('product_id')
@@ -93,8 +119,7 @@ class Product(Resource):
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
-    @cross_origin(origin='localhost', supports_credentials=True)
-    def post(self, product_name):
+    def put(self, param):
         """
         Will update the details of a product
         :return: response
@@ -123,5 +148,5 @@ class Product(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(BulkProduct, "/")
-api.add_resource(Product, "/<string:product_name>")
+# api.add_resource(BulkProduct, "/")
+api.add_resource(Product, "/")

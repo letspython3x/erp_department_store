@@ -53,7 +53,6 @@ class QuotationModel(BaseModel):
         self.quotation = quotation
         self.table_name = 'Quotation'
         self.pk_key = 'quotation_id'
-        self.create_at = str(datetime.now())
 
     @cached_property
     def quotation_id(self):
@@ -93,9 +92,7 @@ class QuotationModel(BaseModel):
 
     @staticmethod
     def fetch_customer_details(quotation):
-        c = dict(customer_phone=quotation.get("customer_phone"),
-                 customer_email=quotation.get("customer_email"),
-                 customer_name=quotation.get("customer_name"))
+        c = dict(customer_id=quotation.get("customer_id"))
         return c
 
     def fetch_quotation_metadata(self, quotation):
@@ -140,27 +137,6 @@ class QuotationModel(BaseModel):
         record.update(md)
         is_added = self.db.add_new_records(record, pk_key=self.pk_key)
         return is_added
-
-    # def create(self, customer_id):
-    #     """
-    #     saves the customer if it does not exist, after incrementing the last customer's id
-    #     :return: None
-    #     """
-    #     print(f"Customer ID to be attached: {customer_id}")
-    #     customer = CustomerModel().search_by_id(pk_key='customer_id', pk_val=customer_id)
-    #     print(f"Customer: {customer}")
-    #     if customer_id and self.quotation_id:
-    #         record = dict(
-    #             customer_id=customer_id,
-    #             quotation_id=self.quotation_id,
-    #             quotation_total=Decimal(str(self.quotation_total)),
-    #             customer_name=f"{customer.get('first_name')} {customer.get('last_name')}",
-    #             customer_phone=customer.get('phone'),
-    #             customer_email=customer.get('email'),
-    #             create_time=str(date.today()),
-    #             quotation_items=self.quotation_products,
-    #         )
-    #         self.db.add_new_records(record, pk_key=self.pk_key)
 
     @staticmethod
     def products_form_to_dict(product_form_set):
@@ -229,6 +205,7 @@ class ProductModel(BaseModel):
         if product:
             logger.info("Initiating Product config...")
             self.product_name = product.get('name')
+            self.serial_no = product.get('serial_no')
             self.category = product.get('category')
             self.cost_price = product.get('cost_price')
             self.sell_price = product.get('sell_price')
@@ -253,6 +230,14 @@ class ProductModel(BaseModel):
             record = self.db.search_by_attributes(query)
             return record
 
+    def search_by_serial_no(self, serial_no=None):
+        if serial_no or self.serial_no:
+            query = {
+                'serial_no': serial_no or serial_no
+            }
+            record = self.db.search_by_attributes(query)
+            return record
+
     def create(self):
         """
         saves the product if it does not exist, after incrementing the last product's id
@@ -268,6 +253,7 @@ class ProductModel(BaseModel):
             record = dict(
                 product_id=Decimal(str(product_id)),
                 name=self.product_name,
+                serial_no=self.serial_no,
                 category=self.category,
                 description=self.description,
                 distributor=self.distributor,
@@ -356,7 +342,7 @@ class ProductModel(BaseModel):
 
         return is_updated
 
-    def fetch_all_products(self):
+    def fetch_all(self):
         records = self.db.scan_table(self.pk_key)
         return records
 
@@ -366,29 +352,25 @@ class CustomerModel(BaseModel):
         logger.info("Initializing Customer...")
         super(CustomerModel, self).__init__(table_name='Customer')
         if customer:
-            print("Initiating Customer config...")
-            self.first_name = customer.get('first_name').lower()
-            self.last_name = customer.get('last_name').lower()
-            self.phone = str(customer.get('phone')).lower()
-            self.email = customer.get('email').lower()
-            self.street = customer.get('street').lower()
-            self.state = customer.get('state').lower()
-            self.country = customer.get('country').lower()
-            self.postal_code = customer.get('postal_code').lower()
-            self.validate()
+            print("Fetching Customer details...")
+            self.first_name = customer.get('first_name')
+            self.middle_name = customer.get('middle_name')
+            self.last_name = customer.get('last_name')
+            self.email = customer.get("email")
+            self.gender = customer.get("gender")
+            self.category = customer.get("category")
+            self.dob = customer.get("dob")
+            self.membership = customer.get("membership")
+            self.postcode = customer.get("postcode")
+            self.state = customer.get("state")
+            self.city = customer.get("city")
+            self.country = customer.get("country")
+            self.phone =  customer.get("phone")
+            # self.phone = self.get_phone(customer)
+            self.address = self.get_address(customer)
 
         self.table_name = 'Customer'
         self.pk_key = 'customer_id'
-
-    def validate(self):
-        assert isinstance(self.first_name, str)
-        assert isinstance(self.last_name, str)
-        assert isinstance(self.phone, str)
-        assert isinstance(self.email, str)
-        assert isinstance(self.street, str)
-        assert isinstance(self.state, str)
-        assert isinstance(self.country, str)
-        assert isinstance(self.postal_code, str)
 
     @cached_property
     def customer_id(self):
@@ -430,7 +412,23 @@ class CustomerModel(BaseModel):
             record = self.db.search_by_attributes(query)
             return record
 
-    def save(self):
+    # @staticmethod
+    # def get_phone(customer):
+    #     if customer.get('phone_1') and customer.get('phone_2'):
+    #         phone = [customer.get('phone_1'), customer.get('phone_2')]
+    #     else:
+    #         phone = customer.get('phone_1') or customer.get('phone_2')
+    #     return phone
+
+    @staticmethod
+    def get_address(customer):
+        if customer.get('address_1') and customer.get('address_2'):
+            address = [customer.get('address_1'), customer.get('address_2')]
+        else:
+            address = customer.get('address_1') or customer.get('address_2')
+        return address
+
+    def create(self):
         """
         saves the customer if it does not exist, after incrementing the last customer's id
         :return: None
@@ -443,13 +441,19 @@ class CustomerModel(BaseModel):
             record = dict(
                 customer_id=customer_id,
                 first_name=self.first_name,
+                middle_name=self.middle_name,
                 last_name=self.last_name,
+                gender=self.gender,
                 phone=self.phone,
                 email=self.email,
-                street=self.street or '(null)',
+                category=self.category,
+                dob=self.dob,
+                membership=self.membership,
+                address=self.address,
+                city=self.city or '(null)',
                 state=self.state or '(null)',
                 country=self.country or '(null)',
-                postal_code=self.postal_code or '(null)'
+                postcode=self.postcode or '(null)',
             )
             self.db.add_new_records(record, pk_key=self.pk_key)
             logger.info(f"New Customer Saved successfully; ID:{customer_id}")
@@ -457,3 +461,8 @@ class CustomerModel(BaseModel):
             # Verify all the fields are matching
             logger.info(f"Customer already present, Customer ID: {customer_id}")
         return customer_id
+
+
+    def fetch_all(self):
+        records = self.db.scan_table(self.pk_key)
+        return records

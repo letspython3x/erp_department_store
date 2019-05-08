@@ -12,44 +12,28 @@ api = Api(bp_quotation)
 
 
 class Quotation(Resource):
-    def get(self):
-        if not request.json:
-            abort(404)
-        payload = request.json
+    def get(self, quotation_id):
+        print("Need to fetch data for Quotation ID: %s" % quotation_id)
         status = 404
-
-        quotation_id = payload.get('quotation_id')
+        # if not request.json:
+        #     abort(status)
+        print("Need to fetch data for Quotation ID: %s" % quotation_id)
+        quotation = None
         if quotation_id:
             qm = QuotationModel()
-            data = qm.search_by_id('quotation_id', int(quotation_id))
-            if data:
+            quotation = qm.search_by_id('quotation_id', int(quotation_id))
+            if quotation:
                 status = 200
+                message = "SUCCESS"
             else:
-                data = dict(message="Quotation does not exist")
+                message = "Quotation does not exist"
         else:
-            data = dict(message="Please provide quotation ID")
+            message = "Please provide numeric quotation ID"
 
+        data = dict(quotation_id=quotation_id,
+                    quotation=quotation,
+                    message=message)
         payload = json.dumps(data, use_decimal=True)
-        logger.info("PAYLOAD SENT: %s" % payload)
-        return Response(payload, status=status, mimetype="application/json")
-
-    def put(self):
-        if not request.json:
-            abort(404)
-        quotation = request.json
-        status = 404
-        # vf = ValidateQuotation(**form_data)
-        # if vf.validate():
-        if quotation:
-            qm = QuotationModel(quotation)
-            qm.create()
-            status = 200
-            data = dict(quotation_id=qm.quotation_id,
-                        message="quotation created Successfully")
-        else:
-            data = dict(message="Please provide quotation details to save")
-
-        payload = json.dumps(data)
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
@@ -59,11 +43,34 @@ class Quotation(Resource):
         :return:
         """
 
+
+class SaveQuotation(Resource):
     def post(self):
-        """
-        A quotation will never be updated, once created
-        :return:
-        """
+        status = 404
+        if not request.json:
+            abort(status)
+        quotation = request.json
+        print(quotation)
+        quotation_id = None
+        vf = ValidateQuotation(quotation)
+
+        if vf.validate():
+            qm = QuotationModel(quotation)
+            if qm.create():
+                status = 200
+                quotation_id = qm.quotation_id
+                message = "Quotation created Successfully"
+            else:
+                message = "No Quotation Saved, Some internal error"
+        else:
+            message = "Invalid Quotation details"
+
+        data = dict(quotation_id=quotation_id,
+                    message=message)
+        payload = json.dumps(data)
+        logger.info("PAYLOAD SENT: %s" % payload)
+        return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(Quotation, "/")
+api.add_resource(SaveQuotation, "/")
+api.add_resource(Quotation, "/<int:quotation_id>")
