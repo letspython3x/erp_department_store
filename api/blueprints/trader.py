@@ -24,7 +24,6 @@ trader_res_model = api.model('traderResponse', {
 })
 
 
-# @api.route('/<trader_id>')
 @api.route('/')
 class Trader(Resource):
     @api.response(401, "Unauthorized")

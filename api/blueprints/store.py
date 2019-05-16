@@ -24,7 +24,6 @@ store_res_model = api.model('storeResponse', {
 })
 
 
-#@api.route('/<store_id>')
 @api.route('/')
 class Store(Resource):
     @api.response(401, "Unauthorized")
