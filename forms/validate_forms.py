@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from decimal import Decimal
 
 
 class ValidatePayload(ABC):
@@ -123,4 +122,32 @@ class ValidateQuotation(ValidatePayload):
             assert isinstance(product.get('quoted_price'), int)
             assert isinstance(product.get('discount'), int)
             assert isinstance(product.get('sub_total'), int)
+        return True
+
+
+class ValidateStore(ValidatePayload):
+    def __init__(self, store, **kw):
+        super(ValidateStore, self).__init__(**kw)
+        self.name = store.get('name')
+        self.address = store.get('address')
+        self.country = store.get('country')
+
+    def validate(self):
+        assert isinstance(self.name, str)
+        assert isinstance(self.address, str)
+        assert isinstance(self.country, str)
+        return True
+
+
+class ValidateTrader(ValidatePayload):
+    def __init__(self, store, **kw):
+        super(ValidateTrader, self).__init__(**kw)
+        self.name = store.get('name')
+        self.address = store.get('address')
+        self.country = store.get('country')
+
+    def validate(self):
+        assert isinstance(self.name, str)
+        assert isinstance(self.address, str)
+        assert isinstance(self.country, str)
         return True

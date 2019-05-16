@@ -2,9 +2,9 @@ import simplejson as json
 from flask import request, abort, Response
 from flask_restplus import Resource, Api
 
-from quotation_app import bp_product, ValidateProduct
+from api import bp_product, ValidateProduct
 from utils.generic_utils import get_logger
-from . import ProductModel
+from models.product_model import ProductModel
 
 logger = get_logger(__name__)
 api = Api(bp_product)

@@ -2,15 +2,21 @@
 import simplejson as json
 
 from flask import request, abort, Response
-from flask_restplus import Resource, Api
-from models.models import QuotationModel
-from quotation_app import bp_quotation, ValidateQuotation
+from flask_restplus import Resource, Api, fields
+from models.quotation_model import QuotationModel
+from api import bp_quotation, ValidateQuotation
 from utils.generic_utils import get_logger
 
 logger = get_logger(__name__)
-api = Api(bp_quotation)
+api = Api(bp_quotation,
+          title='Quotation API',
+          version='v0.1',
+          doc='/api/documentation')
+
+quotation_model = api.model('Quotation', {'quotation_id': fields.Integer()})
 
 
+@api.route('/quotation')
 class Quotation(Resource):
     def get(self):
         status = 404
@@ -27,6 +33,7 @@ class Quotation(Resource):
                 message = "Invalid Quotation, Please provide correct quotation ID"
         else:
             message = "Please provide quotation ID"
+            quotation = None
 
         data = dict(quotation_id=quotation_id,
                     quotation=quotation,
@@ -47,7 +54,7 @@ class Quotation(Resource):
         if vf.validate():
             qm = QuotationModel(quotation)
             if qm.create():
-                status = 200
+                status = 201
                 quotation_id = qm.quotation_id
                 message = "Quotation created Successfully"
             else:
@@ -61,11 +68,10 @@ class Quotation(Resource):
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
-
     def delete(self):
         """
         A quotation will never be deleted, once created
         :return:
         """
 
-api.add_resource(Quotation, "/")
+# api.add_resource(Quotation, "/")

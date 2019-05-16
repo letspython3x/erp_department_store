@@ -1,8 +1,8 @@
 import simplejson as json
 from flask import request, abort, Response
 from flask_restplus import Resource, Api
-from models.models import CustomerModel
-from quotation_app import bp_customer, ValidateUser
+from models.customer_model import CustomerModel
+from api import bp_customer, ValidateUser
 from utils.generic_utils import get_logger
 
 logger = get_logger(__name__)
