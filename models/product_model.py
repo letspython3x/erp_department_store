@@ -100,7 +100,7 @@ class ProductModel(RetailModel):
     def update_quantity_in_stocks(self, product_id, quantity):
         key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
         self.search_by_product_id(product_id)
-        UpdateExpression = "SET units_in_stock=:units_in_stock"
+        UpdateExpression = "ADD units_in_stock :units_in_stock"
         ExpressionAttributeValues = {
             ":units_in_stock": quantity
         }

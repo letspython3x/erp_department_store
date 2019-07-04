@@ -123,5 +123,4 @@ class Product(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-# api.add_resource(BulkProduct, "/")
 api.add_resource(Product, "/")
