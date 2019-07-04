@@ -74,7 +74,7 @@ class CustomerModel(RetailModel):
         response = self.model.query(
             IndexName='gsi_1',
             KeyConditionExpression=Key('sk').eq('CUSTOMER'),
-            FilterExpression=Attr('is_active').eq(1),
+            # FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
         data = response['Items']
         return data

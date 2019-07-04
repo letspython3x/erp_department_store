@@ -18,11 +18,12 @@ class Customer(Resource):
         email = request.args.get('email', '')
 
         cm = CustomerModel()
-        if customer_id not in [0, 'null']:
+        print(customer_id)
+        if customer_id not in [None, 0, 'null', '']:
             data = cm.search_by_customer_id(customer_id)
-        elif phone not in [0, 'null']:
+        elif phone not in [None, 0, 'null', '']:
             data = cm.search_by_phone(phone)
-        elif email not in [0, 'null']:
+        elif email not in [None, 0, 'null', '']:
             data = cm.search_by_email(email)
         else:
             data = cm.get_recent_customers(limit=10)
