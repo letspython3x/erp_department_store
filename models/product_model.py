@@ -1,164 +1,141 @@
 from datetime import datetime
-from decimal import Decimal
-from werkzeug.utils import cached_property
 
-from models.base_model import BaseModel
+from boto3.dynamodb.conditions import Key, Attr
+from decimal import Decimal
+from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
-class ProductModel(BaseModel):
-    def __init__(self, product=None):
-        super(ProductModel, self).__init__(table_name='Product')
-        logger.info("Initializing Product...")
-        self.table_name = 'Product'
-        self.pk_key = 'product_id'
-        if product:
-            logger.info("Initiating Product config...")
-            self.product_name = product.get('name')
-            self.serial_no = product.get('serial_no')
-            self.category = product.get('category')
-            self.cost_price = product.get('cost_price')
-            self.sell_price = product.get('sell_price')
-            self.quantity = product.get('quantity')
-            self.distributor = product.get('distributor')
-            self.description = product.get('description')
-            self.is_active = product.get("is_active", 1)
-            self.quantity = product.get("quantity", 0)
+class ProductModel(RetailModel):
+    def __init__(self):
+        super(ProductModel, self).__init__()
+        self.table = 'Product'
 
-    @cached_property
-    def product_id(self):
-        product = self.search_by_name()
-        if product:
-            product_id = product[0][self.pk_key]
-            return product_id
-
-    def search_by_name(self, product_name=None):
-        if product_name or self.product_name:
-            query = {
-                'name': product_name or self.product_name
-            }
-            record = self.db.search_by_attributes(query)
-            return record
-
-    def search_by_serial_no(self, serial_no=None):
-        if serial_no or self.serial_no:
-            query = {
-                'serial_no': serial_no or serial_no
-            }
-            record = self.db.search_by_attributes(query)
-            return record
-
-    def create(self):
+    def generate_new_product_id(self):
         """
-        saves the product if it does not exist, after incrementing the last product's id
-        :return: None
-        """
-        product_id = self.product_id
-        if not product_id:
-            logger.info(f"Saving the New Product...")
-            product_id = int(self.last_record[self.pk_key]) + 1
-
-            logger.info(f"New Product ID: {product_id}")
-            print(f"{product_id} {self.product_name} {self.category} {self.cost_price}")
-            record = dict(
-                product_id=Decimal(str(product_id)),
-                name=self.product_name,
-                serial_no=self.serial_no,
-                category=self.category,
-                description=self.description,
-                distributor=self.distributor,
-                cost_price=Decimal(str(self.cost_price)),
-                sell_price=Decimal(str(self.sell_price)),
-                is_active=Decimal(str(int(self.is_active))),
-                quantity=self.quantity
-            )
-            # self.db.save_records(record, pk_key=self.pk_key)
-            self.db.add_new_records(record, pk_key='name')
-            logger.info(f"New Product Saved Successfully; ID: {product_id}")
-        else:
-            # Verify all the fields are matching
-            logger.info(f"Product already present, Product ID: {self.product_id}")
-            logger.info(f"Updating the old Product...")
-            self.update(product_id, self.product_name, self.category, self.cost_price, self.sell_price, self.is_active,
-                        self.quantity, self.description, self.distributor)
-        return product_id
-
-    def update(self, product_id, product_name=None, category=None, cost_price=None, sell_price=None,
-               is_active=None, quantity=None, description=None, distributor=None):
-        """
-        update the corresponding values of the product,
-        by saving the old with new values.
-        :return: True
-        """
-        # product = self.search_by_id(pk_key='product_id', pk_val=product_id)
-        record = dict(
-            product_id=product_id,
-            name=product_name,
-            category=category,
-            description=description,
-            distributor=distributor,
-            cost_price=Decimal(str(cost_price)),
-            sell_price=Decimal(str(sell_price)),
-            is_active=is_active,
-            quantity=quantity
-        )
-        is_updated = self.db.update_record(record)
-        if is_updated:
-            logger.info(f"UPDATE Product SUCCESS: ID: {product_id}")
-            return is_updated
-        logger.info(f"UPDATE Product FAILURE: ID: {product_id}")
-
-    def update_details(self, product_id, new_data):
-        existing_record = self.search_by_id(pk_key='product_id', pk_val=product_id)
-
-        product_name = new_data.get('name') or existing_record.get('name')
-        category = new_data.get('category') or existing_record.get('category')
-        distributor = new_data.get('distributor') or existing_record.get('distributor')
-        description = new_data.get('description') or existing_record.get('description')
-        cost_price = new_data.get('cost_price') or existing_record.get('cost_price')
-        sell_price = new_data.get('sell_price') or existing_record.get('sell_price')
-        is_active = new_data.get('is_active') or existing_record.get('is_active')
-        quantity = new_data.get('quantity') or existing_record.get('quantity')
-
-        self.update(product_id, product_name, category, cost_price, sell_price, is_active, quantity, description,
-                    distributor)
-
-    def deactivate(self, product):
-        """
-        Delete will only mark a product as in active,
-        by putting is_active=0
-        :param id:
+        get the number of pk that starts with "product"
         :return:
         """
-        # self.db.delete(self.pk_key, int(id))
-        return self.switch_active_flag(product, is_active=0)
+        _id = self.get_num_records("PRODUCT") + 1
+        print(_id)
+        return _id
 
-    def activate(self, product):
-        return self.switch_active_flag(product, is_active=1)
-
-    def switch_active_flag(self, product, is_active):
-        product_id = product.get('product_id')
-        product_name = product.get('name')
-        category = product.get('category')
-        cost_price = product.get('cost_price')
-        sell_price = product.get('sell_price')
-        quantity = product.get('quantity')
-        distributor = product.get('distributor')
+    def insert(self, product):
+        category_id = product.get('category_id')
         description = product.get('description')
-        is_active = is_active
-        print(f"{product_id}, {product_name}, {category}, {cost_price}, {is_active}, {quantity}, {distributor}")
-        is_updated = self.update(product_id, product_name, category, cost_price, sell_price, is_active, quantity,
-                                 description, distributor)
+        is_active = product.get("is_active", 1)
+        product_id = self.generate_new_product_id()
+        product_name = product.get('product_name')
+        sell_price = Decimal(product.get('sell_price'))
+        serial_no = product.get('serial_no')
+        supplier_id = product.get('supplier_id')
+        units_in_stock = int(product.get('units_in_stock', 0))
+        unit_price = Decimal(product.get('unit_price'))
 
-        return is_updated
+        item = {
+            "pk": f"{'products'}#{product_id}",
+            "sk": f"PRODUCT",
+            "data": f"{product_name}#{category_id}#{serial_no}#{is_active}"
+        }
 
-    # def fetch_all(self):
-    #     records = self.db.scan_table(self.pk_key)
-    #     return records
-    def search_by_id(self, pk_val, pk_key=None):
-        record = BaseModel.search_by_id(pk_val=pk_val, pk_key=self.pk_key)
-        if record:
-            return record[0]
+        item.update(product)
+        # TODO: Check if the same item already exists
+        already_existing_id = self.if_item_already_exists(item, sk='PRODUCT')
+        if already_existing_id:
+            return already_existing_id
+        else:
+            if self.save(item):
+                return product_id
+
+    def search_by_product_id(self, product_id):
+        val = f"{'products'}#{product_id}"
+        logger.info(f"Searching the product ID: {product_id} ...")
+        return self.get_by_partition_key(val)
+
+    def search_by_name(self, product_name):
+        # val = f"{product_name}"
+        logger.info(f"Searching the PRODUCT by Name: {product_name} ...")
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('PRODUCT') & Key('data').begins_with(
+                                        product_name))
+        data = response['Items']
+        return data
+
+    def get_recent_products(self, limit):
+        print(limit)
+        response = self.model.query(
+            IndexName='gsi_1',
+            KeyConditionExpression=Key('sk').eq('PRODUCT'),
+            FilterExpression=Attr('is_active').eq(1),
+            Limit=limit)
+        data = response['Items']
+        # data.sort(key=lambda item: int(item['pk'].split('#')[1]))
+        return data
+
+    def update_product_item(self, product_id, product):
+        print(self.get_by_partition_key(product_id))
+        product.pop('product_id')
+        product.pop('description')
+        product.pop('sell_price')
+        product.pop('unit_price')
+        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        print("KEY : ", key)
+        attribute_updates = self.get_changed_elements(product_id, product)
+        # print("attribute_updates ", attribute_updates)
+
+        UpdateExpression = "SET "
+        ExpressionAttributeValues = {}
+
+        for k in attribute_updates.keys():
+            UpdateExpression += "{}=:{}, ".format(k, k)
+            ExpressionAttributeValues.update({
+                ":{}".format(k): str(attribute_updates.get(k))
+            })
+
+        self.update(key, UpdateExpression[:-2], ExpressionAttributeValues)
+
+    def update_quantity_in_stocks(self, product_id, quantity):
+        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        self.search_by_product_id(product_id)
+        UpdateExpression = "SET units_in_stock=:units_in_stock"
+        ExpressionAttributeValues = {
+            ":units_in_stock": quantity
+        }
+        updated_data = self.update(key, UpdateExpression, ExpressionAttributeValues)
+        return updated_data["units_in_stock"]
+
+    def get_changed_elements(self, product_id, new_product):
+        ori_product = self.search_by_product_id(product_id)[0]
+        changes = {}
+        for key in new_product.keys():
+            if ori_product.get(key) and new_product.get(key) == ori_product.get(key):
+                changes[key] = ori_product.get(key)
+            else:
+                changes[key] = new_product.get(key)
+        # print("Changed : ", changes)
+        return changes
+
+    def search_by_serial_no(self, serial_no):
+        logger.info("Searching by Serial Number: %s" % serial_no)
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('PRODUCT'),
+                                    FilterExpression=Attr('serial_no').eq(serial_no)
+                                    )
+        # print(response)
+        # print(len(response['Items']))
+        return (response['Items'])
+
+    def delete_product(self, product_id):
+        """
+        Mark the product as in active by SET is_active=0
+        :param product_id:
+        :return:
+        """
+        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        UpdateExpression = "SET is_active=:is_active"
+        ExpressionAttributeValues = {":is_active": 0}
+        self.update(key, UpdateExpression, ExpressionAttributeValues)
+        return product_id
