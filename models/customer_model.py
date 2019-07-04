@@ -1,130 +1,95 @@
 from datetime import datetime
-from decimal import Decimal
-from werkzeug.utils import cached_property
 
-from models.base_model import BaseModel
+from boto3.dynamodb.conditions import Key, Attr
+
+from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
-class CustomerModel(BaseModel):
-    def __init__(self, customer=None):
+class CustomerModel(RetailModel):
+    def __init__(self):
         logger.info("Initializing Customer...")
-        super(CustomerModel, self).__init__(table_name='Customer')
-        if customer:
-            print("Fetching Customer details...")
-            self.first_name = customer.get('first_name')
-            self.middle_name = customer.get('middle_name')
-            self.last_name = customer.get('last_name')
-            self.email = customer.get("email")
-            self.gender = customer.get("gender")
-            self.category = customer.get("category")
-            self.dob = customer.get("dob")
-            self.membership = customer.get("membership")
-            self.postcode = customer.get("postcode")
-            self.state = customer.get("state")
-            self.city = customer.get("city")
-            self.country = customer.get("country")
-            self.phone = customer.get("phone")
-            # self.phone = self.get_phone(customer)
-            self.address = self.get_address(customer)
+        super(CustomerModel, self).__init__()
+        self.pk = 'customers'
 
-        self.table_name = 'Customer'
-        self.pk_key = 'customer_id'
+    def generate_new_customer_id(self):
+        """
+        get the number of pk that starts with "customers"
+        :return:
+        """
+        return len(self.get_records_begins_with_pk(_str=self.pk)) + 1
 
-    @cached_property
-    def customer_id(self):
-        """
-        If Customer exists, returns his customer_id
-        elif customer does not exist, return the last customer ID recorded.
-        :return: Customer ID
-        """
-        customer = self.search_by_phone() or self.search_by_email() or self.search_by_name()
-        if customer:
-            customer_id = customer[0][self.pk_key]
+    def insert(self, customer):
+        customer_id = self.generate_new_customer_id()
+        primary_phone = customer.get("primary_phone")
+        email = customer.get("email")
+        country = customer.get("country", '')
+        state = customer.get("state")
+
+        item = {
+            "pk": f"customers#{customer_id}",
+            "sk": f"CUSTOMER",
+            "data": f"{primary_phone}#{email}#{country}#{state}"
+        }
+        item.update(customer)
+
+        if self.model.save(item):
             return customer_id
 
-    def search_by_phone(self, phone=None):
-        logger.info(f"Searching the Customer by Phone: {phone}...")
-        if phone or self.phone:
-            query = {
-                'phone': phone or self.phone
-            }
-            record = self.db.search_by_attributes(query)
-            return record
+    def search_by_customer_id(self, customer_id):
+        val = f"{self.pk}#{customer_id}"
+        logger.info(f"Searching the Customer by ID: {customer_id} ...")
+        return self.get_by_partition_key(val)
 
-    def search_by_email(self, email=None):
-        logger.info(f"Searching the Customer by Email: {email}...")
-        if email or self.email:
-            query = {
-                'email': email or self.email
-            }
-            record = self.db.search_by_attributes(query)
-            return record
+    def search_by_email(self, email):
+        logger.info("Searching by phone number: %s" % email)
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+                                    FilterExpression=Attr('email').eq(email)
+                                    )
+        return (response['Items'])
 
-    def search_by_name(self, first_name=None, last_name=None):
-        logger.info(f"Searching the Customer by Name: {first_name} {last_name}...")
-        if (first_name and last_name) or (self.first_name and self.last_name):
-            query = {
-                'first_name': first_name or self.first_name,
-                'last_name': last_name or self.last_name
-            }
-            record = self.db.search_by_attributes(query)
-            return record
+    def search_by_phone(self, phone):
+        logger.info("Searching by phone number: %s" % phone)
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+                                    FilterExpression=Attr('primary_phone').eq(phone) or Attr('secondary_phone').eq(
+                                        phone)
+                                    )
+        return (response['Items'])
 
-    # @staticmethod
-    # def get_phone(customer):
-    #     if customer.get('phone_1') and customer.get('phone_2'):
-    #         phone = [customer.get('phone_1'), customer.get('phone_2')]
-    #     else:
-    #         phone = customer.get('phone_1') or customer.get('phone_2')
-    #     return phone
+    def search_by_name(self, first_name, last_name, middle_name='NULL'):
+        logger.info(f"Searching the Customer by Name: {first_name} {last_name} ...")
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+                                    FilterExpression=Attr('first_name').eq(first_name) and Attr('last_name').eq(
+                                        last_name) and Attr('middle_name').eq(middle_name))
+        return (response['Items'])
 
-    @staticmethod
-    def get_address(customer):
-        if customer.get('address_1') and customer.get('address_2'):
-            address = [customer.get('address_1'), customer.get('address_2')]
-        else:
-            address = customer.get('address_1') or customer.get('address_2')
-        return address
+    def get_recent_customers(self, limit):
+        print(limit)
+        response = self.model.query(
+            IndexName='gsi_1',
+            KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+            FilterExpression=Attr('is_active').eq(1),
+            Limit=limit)
+        data = response['Items']
+        return data
 
-    def create(self):
+    def delete_customer(self, customer_id):
         """
-        saves the customer if it does not exist, after incrementing the last customer's id
-        :return: None
+        Mark the product as in active by SET is_active=0
+        :param product_id:
+        :return:
         """
-        customer_id = self.customer_id
-        if not customer_id:
-            logger.info(f"Saving the New Customer...")
-            customer_id = int(self.last_record[self.pk_key]) + 1  # if self.last_record else 1
-            logger.info(f"New Customer ID: {customer_id}")
-            record = dict(
-                customer_id=customer_id,
-                first_name=self.first_name,
-                middle_name=self.middle_name,
-                last_name=self.last_name,
-                gender=self.gender,
-                phone=self.phone,
-                email=self.email,
-                category=self.category,
-                dob=self.dob,
-                membership=self.membership,
-                address=self.address,
-                city=self.city or '(null)',
-                state=self.state or '(null)',
-                country=self.country or '(null)',
-                postcode=self.postcode or '(null)',
-            )
-            is_added = self.db.add_new_records(record, pk_key=self.pk_key)
-            logger.info(f"New Customer Saved successfully; ID:{customer_id}")
-        else:
-            # Verify all the fields are matching
-            logger.info(f"Customer already present, Customer ID: {customer_id}")
+        key = {'pk': f"{'customers'}#{customer_id}", "sk": "CUSTOMER"}
+        UpdateExpression = "SET is_active=:is_active"
+        ExpressionAttributeValues = {":is_active": 0}
+        self.update(key, UpdateExpression, ExpressionAttributeValues)
         return customer_id
 
-    def search_by_id(self, pk_val, pk_key=None):
-        record = BaseModel.search_by_id(pk_key=self.pk_key, pk_val=pk_val)
-        if record:
-            return record[0]
+    def update_product_item(self, customer_id, customer):
+        return 0
