@@ -13,17 +13,20 @@ class CustomerModel(RetailModel):
     def __init__(self):
         logger.info("Initializing Customer...")
         super(CustomerModel, self).__init__()
-        self.pk = 'customers'
+        self.table = "CUSTOMER"
 
     def generate_new_customer_id(self):
         """
         get the number of pk that starts with "customers"
         :return:
         """
-        return len(self.get_records_begins_with_pk(_str=self.pk)) + 1
+        _id = self.get_num_records(self.table) + 1
+        return _id
 
     def insert(self, customer):
         customer_id = self.generate_new_customer_id()
+        customer['customer_id'] = customer_id
+
         primary_phone = customer.get("primary_phone")
         email = customer.get("email")
         country = customer.get("country", '')
@@ -40,7 +43,7 @@ class CustomerModel(RetailModel):
             return customer_id
 
     def search_by_customer_id(self, customer_id):
-        val = f"{self.pk}#{customer_id}"
+        val = f"customers#{customer_id}"
         logger.info(f"Searching the Customer by ID: {customer_id} ...")
         return self.get_by_partition_key(val)
 
@@ -67,14 +70,14 @@ class CustomerModel(RetailModel):
                                     KeyConditionExpression=Key('sk').eq('CUSTOMER'),
                                     FilterExpression=Attr('first_name').eq(first_name) and Attr('last_name').eq(
                                         last_name) and Attr('middle_name').eq(middle_name))
-        return (response['Items'])
+        return response['Items']
 
     def get_recent_customers(self, limit):
-        print(limit)
+        logger.info("Limiting Query Results to %s" % limit)
         response = self.model.query(
             IndexName='gsi_1',
             KeyConditionExpression=Key('sk').eq('CUSTOMER'),
-            # FilterExpression=Attr('is_active').eq(1),
+            FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
         data = response['Items']
         return data
