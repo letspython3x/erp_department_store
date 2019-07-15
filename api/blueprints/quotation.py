@@ -4,6 +4,7 @@ import simplejson as json
 from flask import request, abort, Response
 from flask_restplus import Resource, Api, fields
 from models.quotation_model import QuotationModel
+from models.customer_model import CustomerModel
 from api import bp_quotation, ValidateQuotation
 from utils.generic_utils import get_logger
 
@@ -16,46 +17,55 @@ api = Api(bp_quotation,
 quotation_model = api.model('Quotation', {'quotation_id': fields.Integer()})
 
 
-@api.route('/quotation')
+# @api.route('/quotation')
 class Quotation(Resource):
     def get(self):
         status = 404
-        quotation_id = request.args.get('quotation_id', None)
-        print("Need to fetch data for Quotation ID: %s" % quotation_id)
+        quotation_id = request.args.get('quotation_id', 0)
+        customer_id = request.args.get('customer_id', 0)
+        employee_id = request.args.get('employee_id', 0)
+        # print("Need to fetch data for Quotation ID: %s" % quotation_id)
 
-        if quotation_id is not None:
-            qm = QuotationModel()
-            quotation = qm.search_by_id('quotation_id', int(quotation_id))
-            if quotation:
-                status = 200
-                message = "Quotation Found"
-            else:
-                message = "Invalid Quotation, Please provide correct quotation ID"
-        else:
-            message = "Please provide quotation ID"
-            quotation = None
+        qm = QuotationModel()
+        quotation = None if quotation_id == 0 else qm.search_by_order_id(int(quotation_id))
+        quotation_by_customer = None if customer_id == 0 else qm.search_by_customer_id(int(customer_id))
+        quotation_by_employee = None if employee_id == 0 else qm.search_by_employee_id(int(employee_id))
 
-        data = dict(quotation_id=quotation_id,
-                    quotation=quotation,
-                    message=message)
+        # if quotation_id is not None:
+        #     qm = QuotationModel()
+        #     quotation = qm.search_by_order_id(int(quotation_id))
+        #     if quotation:
+        #         status = 200
+        #         message = "Quotation Found"
+        #     else:
+        #         message = "Invalid Quotation, Please provide correct quotation ID"
+        # else:
+        #     message = "Please provide quotation ID"
+        #     quotation = None
+
+        data = dict(data=quotation or quotation_by_customer or quotation_by_employee)
+        # message=message)
         payload = json.dumps(data, use_decimal=True)
         logger.info("PAYLOAD SENT: %s" % payload)
-        return Response(payload, status=status, mimetype="application/json")
+        return Response(payload, status=200, mimetype="application/json")
 
     def post(self):
+        # assert isinstance(request, HttpRequest)
         status = 404
-        if not request.json:
-            abort(status)
         quotation = request.json
+        if not quotation:
+            abort(status)
+
         print(quotation)
         quotation_id = None
         vf = ValidateQuotation(quotation)
-
+        print(vf.validate())
         if vf.validate():
-            qm = QuotationModel(quotation)
-            if qm.create():
+            qm = QuotationModel()
+            quotation_id = qm.insert(quotation)
+
+            if quotation_id:
                 status = 201
-                quotation_id = qm.quotation_id
                 message = "Quotation created Successfully"
             else:
                 message = "No Quotation Saved, Some internal error"
@@ -68,10 +78,5 @@ class Quotation(Resource):
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
-    def delete(self):
-        """
-        A quotation will never be deleted, once created
-        :return:
-        """
 
-# api.add_resource(Quotation, "/")
+api.add_resource(Quotation, "/")

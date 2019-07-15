@@ -15,15 +15,6 @@ class ValidatePayload(ABC):
         """Validate the received payload"""
 
 
-class ValidateCustomer(ValidatePayload):
-    def __init__(self, **kw):
-        super(ValidateCustomer, self).__init__(**kw)
-        pass
-
-    def validate(self):
-        pass
-
-
 class ValidateProduct(ValidatePayload):
     def __init__(self, products, **kw):
         super(ValidateProduct, self).__init__(**kw)
@@ -61,11 +52,11 @@ class ValidateUser(ValidatePayload):
     @staticmethod
     def __validate(user):
         first_name = user.get('first_name')
-        middle_name = user.get('middle_name',"#")
+        middle_name = user.get('middle_name', "#")
         last_name = user.get('last_name')
         email = user.get("email")
         primary_phone = user.get("primary_phone")
-        secondary_phone= user.get("secondary_phone")
+        secondary_phone = user.get("secondary_phone")
         fax = user.get("fax")
         gender = user.get("gender")
         is_active = user.get("is_active")
@@ -99,37 +90,66 @@ class ValidateUser(ValidatePayload):
 class ValidateQuotation(ValidatePayload):
     def __init__(self, quotation, **kw):
         super(ValidateQuotation, self).__init__(**kw)
-        self.customer_id = quotation.get('customer_id')
-        self.products = quotation.get('products')
+        self.quotation = quotation
 
     def validate(self):
-        assert isinstance(self.customer_id, int)
-        assert isinstance(self.products, list)
-        return self.validate_products(self.products)
+        if self.quotation:
+            if isinstance(self.quotation, dict):
+                return self.__validate(self.quotation)
 
     @staticmethod
-    def validate_products(products):
-        for product in products:
-            assert isinstance(product.get('name'), str)
+    def __validate(quotation):
+        assert isinstance(quotation.get('customer_id'), int)
+        assert isinstance(quotation.get('quotation_type'), str)
+        assert isinstance(quotation.get('payment_type'), str)
+        assert isinstance(quotation.get('discount_on_total'), (int, float))  # and not isinstance(x, bool)
+        assert isinstance(quotation.get('total_tax'), (int, float))
+        assert isinstance(quotation.get('discounted_sub_total'), (int, float))
+        assert isinstance(quotation.get('quotation_total'), (int, float))
+        assert isinstance(quotation.get('item_rows'), list)
+        line_items = quotation.get('item_rows', [])
+
+        for product in line_items:
+            assert isinstance(product.get('product_name'), str)
             assert isinstance(product.get('category'), str)
             assert isinstance(product.get('quantity'), int)
-            assert isinstance(product.get('quoted_price'), int)
-            assert isinstance(product.get('discount'), int)
-            assert isinstance(product.get('sub_total'), float)
+            assert isinstance(product.get('quoted_price'), (int, float))
+            assert isinstance(product.get('item_discount'), (int, float))
+            assert isinstance(product.get('tax'), (int, float))
+            assert isinstance(product.get('line_item_total'), (int, float))
         return True
 
 
 class ValidateStore(ValidatePayload):
     def __init__(self, store, **kw):
         super(ValidateStore, self).__init__(**kw)
-        self.name = store.get('name')
-        self.address = store.get('address')
-        self.country = store.get('country')
+        self.store = store
 
     def validate(self):
-        assert isinstance(self.name, str)
-        assert isinstance(self.address, str)
-        assert isinstance(self.country, str)
+        if self.store:
+            if isinstance(self.store, dict):
+                return self.__validate(self.store)
+
+    @staticmethod
+    def __validate(store):
+        # store_id, store_name, address, city, postal_code, country, phone, store_admin, category_id
+        store_name = store.get('store_name')
+        category_id = store.get('category_id')
+        store_admin = store.get('store_admin')
+        address = store.get('address')
+        phone = store.get('phone')
+        city = store.get('city')
+        country = store.get('country')
+        postal_code = store.get('postal_code')
+
+        assert isinstance(store_name, str)
+        assert isinstance(category_id, str)
+        assert isinstance(store_admin, str)
+        assert isinstance(address, str)
+        assert isinstance(phone, str)
+        assert isinstance(city, str)
+        assert isinstance(country, str)
+        assert isinstance(postal_code, str)
         return True
 
 
