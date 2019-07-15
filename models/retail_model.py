@@ -15,7 +15,7 @@ local_dynamo_db = get_app_config()["local_dynamo_db"]
 endpoint_url = r"http://localhost:8000"
 
 
-class RetailModel():
+class RetailModel:
     def __init__(self):
         logger.info("Initializing Retail Table...")
         self.table_name = 'Retail'
@@ -37,7 +37,7 @@ class RetailModel():
         else:
             print("GetItem succeeded:")
             item = response['Items']
-            # print(json.dumps(item, indent=4))
+            print(json.dumps(item, indent=4))
             return item
 
     def get_records_begins_with_pk(self, _str):
@@ -46,6 +46,7 @@ class RetailModel():
                 KeyConditionExpression=Key('pk').begins_with(_str),
             )
         except ClientError as e:
+            print(e)
             print(e.response['Error']['Message'])
         else:
             # print("GetItem succeeded:")
@@ -138,27 +139,35 @@ class RetailModel():
         # print(data)
         return data
 
-    def query_records(self):
-        ke = Key('pk').eq('products#2')
-        ke = Key('pk').begins_with('P')
-        fe = Attr('productName').eq('Chang')
-        pe = 'unitsInStock, quantityPerUnit'
+    def query_records(self, index_name, ke, fe, pe):
+        # index_name = "NULL"  # None #'gsi_1'
+        # ke = Key('sk').eq('products#2')
+        # fe = Attr('productName').eq('Chang')
+        # pe = 'unitsInStock, quantityPerUnit'
 
-        response = self.model.query(
-            KeyConditionExpression=ke,
-            # FilterExpression=fe,
-            # ProjectionExpression=pe,
-        )
-        # print(response['Items'])
+        if index_name:
+            response = self.model.query(
+                IndexName=index_name,
+                KeyConditionExpression=ke,
+                FilterExpression=fe,
+                ProjectionExpression=pe,
+            )
+        else:
+            response = self.model.query(
+                KeyConditionExpression=ke,
+                FilterExpression=fe,
+                ProjectionExpression=pe,
+            )
+        print(response['Items'])
         return response['Items']
 
-    def scan_all_records(self):
+    def scan_all_records(self, fe, pe, ean):
 
-        fe = Key('pk').eq('products#2')
-        pe = "#desc, Title, BicycleType"
-        # Expression Attribute Names for Projection Expression only.
-        ean = {"#desc": "Description", }
-        esk = None
+        # fe = Key('pk').eq('products#2')
+        # pe = "#desc, Title, BicycleType"
+        # # Expression Attribute Names for Projection Expression only.
+        # ean = {"#desc": "Description", }
+        # esk = None
 
         response = self.model.scan(
             FilterExpression=fe,

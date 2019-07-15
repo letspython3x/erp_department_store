@@ -1,46 +1,63 @@
 from datetime import datetime
-
-from models.base_model import BaseModel
+from boto3.dynamodb.conditions import Key, Attr
+from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
-class StoreModel(BaseModel):
-    def __init__(self, store=None):
+class StoreModel(RetailModel):
+    def __init__(self):
         logger.info("Initializing Customer...")
-        super(StoreModel, self).__init__(table_name='Store')
-        if store:
-            print("Fetching Customer details...")
-            self.name = store.get('name')
-            self.address = store.get('address')
-            self.country = store.get('country')
+        super(StoreModel, self).__init__()
+        self.table = 'STORE'
 
-        self.table_name = 'store'
-        self.pk_key = 'store_id'
-        self.store_id = 0
+    def generate_new_store_id(self):
+        """
+        get the number of pk that starts with "STORE"
+        :return:
+        """
+        _id = self.get_num_records(self.table) + 1
+        print(_id)
+        return _id
 
-    def create(self):
-        store_id = self.db.get_total_records_count() + 1
-        logger.info(f"Saving the New Store, ID: %s" % store_id)
-        record = dict(
-            store_id=store_id,
-            name=self.name,
-            address=self.address,
-            country=self.country
+    def insert(self, store):
+        store_id = self.generate_new_store_id()
+        store['store_id'] = store_id
+        store_name = store.get('store_name')
+        store_admin = store.get('store_admin')
+        address = store.get('address')
+        phone = store.get('phone')
+        city = store.get('city')
+        country = store.get('country')
+        postal_code = store.get('postal_code')
+
+        item = dict(
+            pk=f"stores#{store_id}",
+            sk="STORE",
+            data="store_name#category_id#store_admin"
         )
-        is_added = self.db.add_new_records(record, pk_key=self.pk_key)
-        if is_added:
-            logger.info(f"New Store Saved successfully; ID:{store_id}")
-            self.store_id = store_id
 
-    def get_record_by_id(self, _id):
-        record = self.search_by_id(pk_key=self.pk_key, pk_val=_id)
-        if record:
-            return record[0]
+        item.update(store)
+        already_existing_id = self.if_item_already_exists(item, sk='STORE')
+        if already_existing_id:
+            return already_existing_id
+        else:
+            if self.save(item):
+                return store_id
 
-    def get_all_records(self):
-        print("fetching all records")
-        records = self.fetch_all(pk_key=self.pk_key)
-        return records
+    def search_by_store_id(self, store_id):
+        val = f"{'stores'}#{store_id}"
+        logger.info(f"Searching the Store by ID: {store_id}")
+        return self.get_by_partition_key(val)
+
+
+    def get_all_stores(self):
+        response = self.model.query(
+            IndexName='gsi_1',
+            KeyConditionExpression=Key('sk').eq('STORE') )
+        data = response['Items']
+        data.sort(key=lambda item: int(item['pk'].split('#')[1]))
+        return data
+
