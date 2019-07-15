@@ -12,22 +12,23 @@ logger = get_logger(__name__)
 class ProductModel(RetailModel):
     def __init__(self):
         super(ProductModel, self).__init__()
-        self.table = 'Product'
+        self.table = 'PRODUCT'
 
     def generate_new_product_id(self):
         """
         get the number of pk that starts with "product"
         :return:
         """
-        _id = self.get_num_records("PRODUCT") + 1
+        _id = self.get_num_records(self.table) + 1
         print(_id)
         return _id
 
     def insert(self, product):
+        product_id = self.generate_new_product_id()
+        product['product_id'] = product_id
         category_id = product.get('category_id')
         description = product.get('description')
         is_active = product.get("is_active", 1)
-        product_id = self.generate_new_product_id()
         product_name = product.get('product_name')
         sell_price = Decimal(product.get('sell_price'))
         serial_no = product.get('serial_no')
@@ -42,7 +43,6 @@ class ProductModel(RetailModel):
         }
 
         item.update(product)
-        # TODO: Check if the same item already exists
         already_existing_id = self.if_item_already_exists(item, sk='PRODUCT')
         if already_existing_id:
             return already_existing_id
