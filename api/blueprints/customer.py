@@ -29,7 +29,7 @@ class Customer(Resource):
             data = cm.get_recent_customers(limit=10)
 
         payload = json.dumps(data)
-        logger.info("PAYLOAD SENT: %s" % payload)
+        # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
     def post(self):
@@ -51,7 +51,7 @@ class Customer(Resource):
                     message=message)
 
         payload = json.dumps(data)
-        logger.info("PAYLOAD SENT: %s" % payload)
+        # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
     def delete(self):
@@ -69,7 +69,7 @@ class Customer(Resource):
             status = 404
 
         payload = json.dumps(data)
-        logger.info("PAYLOAD SENT: %s" % payload)
+        # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
     def put(self):
@@ -96,7 +96,7 @@ class Customer(Resource):
             data = dict(message='Invalid Customer ID')
 
         payload = json.dumps(data)
-        logger.info("PAYLOAD SENT: %s" % payload)
+        # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
 
