@@ -1,11 +1,9 @@
-# import json
 import simplejson as json
-
 from flask import request, abort, Response
 from flask_restplus import Resource, Api, fields
-from models.quotation_model import QuotationModel
-from models.customer_model import CustomerModel
+
 from api import bp_quotation, ValidateQuotation
+from models.quotation_model import QuotationModel
 from utils.generic_utils import get_logger
 
 logger = get_logger(__name__)
@@ -20,33 +18,24 @@ quotation_model = api.model('Quotation', {'quotation_id': fields.Integer()})
 # @api.route('/quotation')
 class Quotation(Resource):
     def get(self):
-        status = 404
         quotation_id = request.args.get('quotation_id', 0)
         customer_id = request.args.get('customer_id', 0)
         employee_id = request.args.get('employee_id', 0)
+        store_id = request.args.get('store_id', 0)
+        quotation_type = request.args.get('quotation_type')
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
         # print("Need to fetch data for Quotation ID: %s" % quotation_id)
 
         qm = QuotationModel()
         quotation = None if quotation_id == 0 else qm.search_by_order_id(int(quotation_id))
         quotation_by_customer = None if customer_id == 0 else qm.search_by_customer_id(int(customer_id))
         quotation_by_employee = None if employee_id == 0 else qm.search_by_employee_id(int(employee_id))
-
-        # if quotation_id is not None:
-        #     qm = QuotationModel()
-        #     quotation = qm.search_by_order_id(int(quotation_id))
-        #     if quotation:
-        #         status = 200
-        #         message = "Quotation Found"
-        #     else:
-        #         message = "Invalid Quotation, Please provide correct quotation ID"
-        # else:
-        #     message = "Please provide quotation ID"
-        #     quotation = None
+        quotation_by_store = None if store_id == 0 else qm.search_by_store_id(int(store_id))
 
         data = dict(data=quotation or quotation_by_customer or quotation_by_employee)
-        # message=message)
         payload = json.dumps(data, use_decimal=True)
-        logger.info("PAYLOAD SENT: %s" % payload)
+        # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=200, mimetype="application/json")
 
     def post(self):
@@ -72,10 +61,9 @@ class Quotation(Resource):
         else:
             message = "Invalid Quotation details"
 
-        data = dict(quotation_id=quotation_id,
-                    message=message)
+        data = dict(quotation_id=quotation_id, message=message)
         payload = json.dumps(data)
-        logger.info("PAYLOAD SENT: %s" % payload)
+        # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
 
