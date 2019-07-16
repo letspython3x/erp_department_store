@@ -100,6 +100,7 @@ class ValidateQuotation(ValidatePayload):
     @staticmethod
     def __validate(quotation):
         assert isinstance(quotation.get('customer_id'), int)
+        assert isinstance(quotation.get('store_id'), int)
         assert isinstance(quotation.get('quotation_type'), str)
         assert isinstance(quotation.get('payment_type'), str)
         assert isinstance(quotation.get('discount_on_total'), (int, float))  # and not isinstance(x, bool)
@@ -111,7 +112,7 @@ class ValidateQuotation(ValidatePayload):
 
         for product in line_items:
             assert isinstance(product.get('product_name'), str)
-            assert isinstance(product.get('category'), str)
+            assert isinstance(product.get('category_name'), str)
             assert isinstance(product.get('quantity'), int)
             assert isinstance(product.get('quoted_price'), (int, float))
             assert isinstance(product.get('item_discount'), (int, float))
