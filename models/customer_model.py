@@ -45,7 +45,9 @@ class CustomerModel(RetailModel):
     def search_by_customer_id(self, customer_id):
         val = f"customers#{customer_id}"
         logger.info(f"Searching the Customer by ID: {customer_id} ...")
-        return self.get_by_partition_key(val)
+        customer = self.get_by_partition_key(val)
+        return customer
+
 
     def search_by_email(self, email):
         logger.info("Searching by phone number: %s" % email)
@@ -53,7 +55,8 @@ class CustomerModel(RetailModel):
                                     KeyConditionExpression=Key('sk').eq('CUSTOMER'),
                                     FilterExpression=Attr('email').eq(email)
                                     )
-        return (response['Items'])
+        customer = self.remove_db_col(response['Items'])
+        return customer
 
     def search_by_phone(self, phone):
         logger.info("Searching by phone number: %s" % phone)
@@ -62,7 +65,8 @@ class CustomerModel(RetailModel):
                                     FilterExpression=Attr('primary_phone').eq(phone) or Attr('secondary_phone').eq(
                                         phone)
                                     )
-        return (response['Items'])
+        customer = self.remove_db_col(response['Items'])
+        return customer
 
     def search_by_name(self, first_name, last_name, middle_name='NULL'):
         logger.info(f"Searching the Customer by Name: {first_name} {last_name} ...")
@@ -70,7 +74,8 @@ class CustomerModel(RetailModel):
                                     KeyConditionExpression=Key('sk').eq('CUSTOMER'),
                                     FilterExpression=Attr('first_name').eq(first_name) and Attr('last_name').eq(
                                         last_name) and Attr('middle_name').eq(middle_name))
-        return response['Items']
+        customer = self.remove_db_col(response['Items'])
+        return customer
 
     def get_recent_customers(self, limit):
         logger.info("Limiting Query Results to %s" % limit)
@@ -79,13 +84,13 @@ class CustomerModel(RetailModel):
             KeyConditionExpression=Key('sk').eq('CUSTOMER'),
             FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
-        data = response['Items']
-        return data
+        customers = self.remove_db_col(response['Items'])
+        return customers
 
     def delete_customer(self, customer_id):
         """
-        Mark the product as in active by SET is_active=0
-        :param product_id:
+        Mark the customer as in active by SET is_active=0
+        :param customer_id:
         :return:
         """
         key = {'pk': f"{'customers'}#{customer_id}", "sk": "CUSTOMER"}
@@ -94,5 +99,5 @@ class CustomerModel(RetailModel):
         self.update(key, UpdateExpression, ExpressionAttributeValues)
         return customer_id
 
-    def update_product_item(self, customer_id, customer):
+    def update_customer(self, customer_id, customer):
         return 0

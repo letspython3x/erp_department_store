@@ -61,3 +61,18 @@ class StoreModel(RetailModel):
         data.sort(key=lambda item: int(item['pk'].split('#')[1]))
         return data
 
+
+    @staticmethod
+    def reformat(store):
+        if isinstance(store, list):
+            for p in store:
+                p.pop("pk")
+                p.pop("sk")
+                p.pop("data")
+        elif isinstance(store, dict):
+            store.pop("pk")
+            store.pop("sk")
+            store.pop("data")
+        else:
+            return store
+        return store

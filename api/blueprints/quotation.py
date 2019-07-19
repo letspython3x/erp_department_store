@@ -33,7 +33,7 @@ class Quotation(Resource):
         quotation_by_employee = None if employee_id == 0 else qm.search_by_employee_id(int(employee_id))
         quotation_by_store = None if store_id == 0 else qm.search_by_store_id(int(store_id))
 
-        data = dict(data=quotation or quotation_by_customer or quotation_by_employee)
+        data = dict(data=quotation or quotation_by_customer or quotation_by_employee or quotation_by_store)
         payload = json.dumps(data, use_decimal=True)
         # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=200, mimetype="application/json")

@@ -4,6 +4,9 @@ from decimal import Decimal
 from boto3.dynamodb.conditions import Key, Attr
 
 from models.retail_model import RetailModel
+from models.store_model import StoreModel
+from models.customer_model import CustomerModel
+
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now
@@ -28,13 +31,32 @@ class QuotationModel(RetailModel):
     def search_by_order_id(self, order_id):
         val = f"{'orders'}#{order_id}"
         logger.info(f"Search QUOTATION by ORDER ID: {order_id}...")
-        return self.get_by_partition_key(val)
+        quotation = self.get_by_partition_key(val)
+        quotation = self.reformat(quotation)
+        return quotation
+
+    @staticmethod
+    def reformat(quotation):
+        logger.info(">>> Reformating the output")
+        metadata = quotation[0]
+        store_id = metadata.get('store_id')
+        customer_id = metadata.get('customer_id')
+        store = StoreModel().search_by_store_id(store_id)
+        customer = CustomerModel().search_by_customer_id(customer_id)
+
+        new_quotation = dict(
+            store=store,
+            customer=customer,
+            line_items=quotation[1:]
+        )
+
+        return new_quotation
 
     def search_by_customer_id(self, customer_id):
         logger.info(f"Search all QUOTATION by Customer ID: {customer_id}...")
         ke = Key('sk').eq('ORDER')
         fe = Attr('customer_id').eq(customer_id)
-        pe = 'customer_id, order_id, employee_id, quotation_type, payment_type, quotation_total, created_at'
+        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         print(data)
         return data
@@ -43,7 +65,15 @@ class QuotationModel(RetailModel):
         logger.info(f"Search all QUOTATION by Employee ID: {employee_id}...")
         ke = Key('sk').eq('ORDER')
         fe = Attr('employee_id').eq(employee_id)
-        pe = 'customer_id, order_id, employee_id, quotation_type, payment_type, quotation_total, created_at'
+        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
+        data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
+        return data
+
+    def search_by_store_id(self, store_id):
+        logger.info(f"Search all QUOTATION by Store ID: {store_id}...")
+        ke = Key('sk').eq('ORDER')
+        fe = Attr('store_id').eq(store_id)
+        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         return data
 

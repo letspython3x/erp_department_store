@@ -53,7 +53,8 @@ class ProductModel(RetailModel):
     def search_by_product_id(self, product_id):
         val = f"{'products'}#{product_id}"
         logger.info(f"Searching the product ID: {product_id} ...")
-        return self.get_by_partition_key(val)
+        product = self.get_by_partition_key(val)
+        return product
 
     def search_by_name(self, product_name):
         # val = f"{product_name}"
@@ -71,9 +72,10 @@ class ProductModel(RetailModel):
             KeyConditionExpression=Key('sk').eq('PRODUCT'),
             FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
-        data = response['Items']
-        # data.sort(key=lambda item: int(item['pk'].split('#')[1]))
-        return data
+
+        products = self.remove_db_col(response['Items'])
+        products.sort(key=lambda item: int(item['pk'].split('#')[1]), reverse=True)
+        return products
 
     def update_product_item(self, product_id, product):
         print(self.get_by_partition_key(product_id))
@@ -139,3 +141,5 @@ class ProductModel(RetailModel):
         ExpressionAttributeValues = {":is_active": 0}
         self.update(key, UpdateExpression, ExpressionAttributeValues)
         return product_id
+
+

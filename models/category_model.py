@@ -45,7 +45,8 @@ class CategoryModel(RetailModel):
     def search_by_category_id(self, category_id):
         val = f"{'categories'}#{category_id}"
         logger.info(f"Searching the category ID: {category_id} ...")
-        return self.get_by_partition_key(val)
+        category = self.get_by_partition_key(val)
+        return category
 
     def search_by_name(self, category_name):
         # val = f"{category_name}"
@@ -53,8 +54,8 @@ class CategoryModel(RetailModel):
         response = self.model.query(IndexName='gsi_1',
                                     KeyConditionExpression=Key('sk').eq('CATEGORY'),
                                     FilterExpression=Attr('category_name').contains(category_name))
-        data = response['Items']
-        return data
+        category = self.remove_db_col(response['Items'])
+        return category
 
     def get_all_categories(self, limit=None):
         if limit is None:
@@ -68,9 +69,9 @@ class CategoryModel(RetailModel):
                 KeyConditionExpression=Key('sk').eq('CATEGORY'),
                 Limit=limit)
 
-        data = response['Items']
-        data.sort(key=lambda item: int(item['pk'].split('#')[1]))
-        return data
+        categories = self.remove_db_col(response['Items'])
+        categories.sort(key=lambda item: int(item['pk'].split('#')[1]))
+        return categories
 
     def update_category(self, category_id, category):
         # TODO : Update the category
@@ -94,7 +95,6 @@ class CategoryModel(RetailModel):
             })
 
         self.update(key, UpdateExpression[:-2], ExpressionAttributeValues)
-
 
 # print(CategoryModel().get_all_categories(5))
 # print(CategoryModel().search_by_name('Beverages'))

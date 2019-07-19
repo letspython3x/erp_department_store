@@ -26,19 +26,19 @@ class RetailModel:
         return dynamo.Table(self.table_name)
 
     def get_by_partition_key(self, pk):
-        print(pk)
         try:
             # response = self.model.get_item(Key={'pk': 'categories#1'})
             response = self.model.query(
                 KeyConditionExpression=Key('pk').eq(pk),
             )
+            # items = self.remove_db_col(response['Items'])
         except ClientError as e:
-            print(e.response['Error']['Message'])
+            logger.error(e.response['Error']['Message'])
         else:
-            print("GetItem succeeded:")
-            item = response['Items']
-            print(json.dumps(item, indent=4))
-            return item
+            logger.info("%s GetItem succeeded:" % self.get_by_partition_key.__name__)
+            items = self.remove_db_col(response['Items'])
+            # logger.info(json.dumps(items, indent=4))
+            return items
 
     def get_records_begins_with_pk(self, _str):
         try:
@@ -46,12 +46,12 @@ class RetailModel:
                 KeyConditionExpression=Key('pk').begins_with(_str),
             )
         except ClientError as e:
-            print(e)
-            print(e.response['Error']['Message'])
+            logger.error(e)
+            logger.error(e.response['Error']['Message'])
         else:
-            # print("GetItem succeeded:")
-            items = response['Items']
-            # print(json.dumps(item, indent=4))
+            logger.info("%s GetItem succeeded:" % self.get_records_begins_with_pk.__name__)
+            items = self.remove_db_col(response['Items'])
+            # logger.info(json.dumps(item, indent=4))
             return items
 
     def get_by_sort_key(self, sk):
@@ -62,10 +62,11 @@ class RetailModel:
             )
         except ClientError as e:
             logger.error(e.response['Error']['Message'])
-            print(e.response['Error']['Message'])
+            logger.info(e.response['Error']['Message'])
         else:
-            item = response['Items']
-            return item
+            logger.info("%s GetItem succeeded:" % self.get_by_sort_key.__name__)
+            items = self.remove_db_col(response['Items'])
+            return items
 
     def get_num_records(self, _type):
         response = self.model.query(
@@ -80,7 +81,7 @@ class RetailModel:
             IndexName='gsi_1',
             KeyConditionExpression=Key('sk').eq(sk) & Key('data').eq(data))
 
-        # print(response["Items"])
+        # logger.info(response["Items"])
 
         return None if len(response["Items"]) == 0 else response["Items"][0].get('pk')
 
@@ -113,7 +114,7 @@ class RetailModel:
         return True
 
     def update(self, key, UpdateExpression, ExpressionAttributeValues, ReturnValues="UPDATED_NEW"):
-        # print(key)
+        # logger.info(key)
         response = self.model.update_item(
             Key=key,
             UpdateExpression=UpdateExpression,
@@ -133,10 +134,10 @@ class RetailModel:
         #     },
         #     ReturnValues=ReturnValues
         # )
-        print("UpdateItem succeeded:")
+        logger.info("UpdateItem succeeded:")
         data = response["Attributes"]
-        # print(json.dumps(response, indent=4))
-        # print(data)
+        # logger.info(json.dumps(response, indent=4))
+        # logger.info(data)
         return data
 
     def query_records(self, index_name, ke, fe, pe):
@@ -158,8 +159,10 @@ class RetailModel:
                 FilterExpression=fe,
                 ProjectionExpression=pe,
             )
-        print(response['Items'])
-        return response['Items']
+
+        items = self.remove_db_col(response['Items'])
+        logger.info(items)
+        return items
 
     def scan_all_records(self, fe, pe, ean):
 
@@ -176,7 +179,7 @@ class RetailModel:
         )
 
         for i in response['Items']:
-            print(json.dumps(i))
+            logger.info(json.dumps(i))
 
         while 'LastEvaluatedKey' in response:
             response = self.model.scan(
@@ -186,5 +189,25 @@ class RetailModel:
                 ExclusiveStartKey=response['LastEvaluatedKey']
             )
 
-            for i in response['Items']:
-                print(json.dumps(i))
+            # for i in response['Items']:
+            #     logger.info(json.dumps(i))
+
+        items = self.remove_db_col(response['Items'])
+        logger.info(items)
+        return items
+
+    @staticmethod
+    def remove_db_col(db_items):
+        logger.info(">>> Removing DB Columns")
+        if isinstance(db_items, list):
+            for p in db_items:
+                p.pop("pk", None)
+                p.pop("sk", None)
+                p.pop("data", None)
+        elif isinstance(db_items, dict):
+            db_items.pop("pk", None)
+            db_items.pop("sk", None)
+            db_items.pop("data", None)
+        else:
+            return db_items
+        return db_items
