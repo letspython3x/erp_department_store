@@ -166,3 +166,15 @@ class ValidateTrader(ValidatePayload):
         assert isinstance(self.address, str)
         assert isinstance(self.country, str)
         return True
+
+
+class ValidateCategory(ValidatePayload):
+    def __init__(self, category, **kw):
+        super(ValidateCategory, self).__init__(**kw)
+        self.name = category.get('category_name')
+        self.description = category.get('description')
+
+    def validate(self):
+        assert isinstance(self.name, str)
+        assert isinstance(self.description, str)
+        return True
