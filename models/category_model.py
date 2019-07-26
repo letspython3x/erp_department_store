@@ -70,7 +70,7 @@ class CategoryModel(RetailModel):
                 Limit=limit)
 
         categories = self.remove_db_col(response['Items'])
-        categories.sort(key=lambda item: int(item['pk'].split('#')[1]))
+        categories.sort(key=lambda item: item.get('category_name'))
         return categories
 
     def update_category(self, category_id, category):

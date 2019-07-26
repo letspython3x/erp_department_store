@@ -103,9 +103,10 @@ class Product(Resource):
         if not request.json:
             abort(403)
         status = 400
+        print(request)
         data = request.json
 
-        product_id = data.get('productID')
+        product_id = data.get('product_id')
         quantity = data.get('quantity')
         print(quantity)
         if product_id and isinstance(quantity, int):
@@ -114,10 +115,8 @@ class Product(Resource):
             status = 200
             data = dict(
                 product_id=product_id,
-                unitsInStock=unitsInStock,
-                message="Stock Updated"
+                message="New Stock Quantity: %d" % unitsInStock
             )
-
         payload = json.dumps(data)
         logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")

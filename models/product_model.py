@@ -74,7 +74,7 @@ class ProductModel(RetailModel):
             Limit=limit)
 
         products = self.remove_db_col(response['Items'])
-        products.sort(key=lambda item: int(item['pk'].split('#')[1]), reverse=True)
+        products.sort(key=lambda item: item.get('product_name'), reverse=False)
         return products
 
     def update_product_item(self, product_id, product):

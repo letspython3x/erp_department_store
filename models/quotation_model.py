@@ -41,10 +41,11 @@ class QuotationModel(RetailModel):
         metadata = quotation[0]
         store_id = metadata.get('store_id')
         customer_id = metadata.get('customer_id')
-        store = StoreModel().search_by_store_id(store_id)
-        customer = CustomerModel().search_by_customer_id(customer_id)
+        store = StoreModel().search_by_store_id(store_id)[0]
+        customer = CustomerModel().search_by_customer_id(customer_id)[0]
 
         new_quotation = dict(
+            metadata=quotation[0],
             store=store,
             customer=customer,
             line_items=quotation[1:]

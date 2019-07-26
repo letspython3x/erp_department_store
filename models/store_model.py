@@ -58,7 +58,7 @@ class StoreModel(RetailModel):
             IndexName='gsi_1',
             KeyConditionExpression=Key('sk').eq('STORE') )
         data = response['Items']
-        data.sort(key=lambda item: int(item['pk'].split('#')[1]))
+        data.sort(key=lambda item: item.get('store_name'))
         return data
 
 
