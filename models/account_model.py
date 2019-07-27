@@ -13,3 +13,30 @@ class AccountModel(RetailModel):
     def __init__(self):
         super(AccountModel, self).__init__()
         self.table = 'ACCOUNTS'
+
+    def update_receivables(self, txn_id):
+        """
+        Accounts Recievables
+
+        - Customer Open Items
+        - Customer cleared items.
+
+        :param txn_id:
+        :return:
+        """
+        pass
+
+    def update_payables(self, txn_id):
+        """
+         - Vendor Open Items
+         - Vendor cleared items.
+        :param txn_id:
+        :return:
+        """
+        pass
+
+    def update_income(self, txn_id):
+        pass
+
+    def update_expenses(self, txn_id):
+        pass

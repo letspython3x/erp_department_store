@@ -9,58 +9,61 @@ TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
-class AccountModel(RetailModel):
+class TransactionModel(RetailModel):
     def __init__(self):
-        super(AccountModel, self).__init__()
-        self.table = 'ACCOUNTS'
+        super(TransactionModel, self).__init__()
+        self.table = 'TRANSACTIONS'
 
     def generate_new_txn_id(self):
         """
-        get the number of pk that starts with "customers"
+        get the number of pk that starts with "transactions"
         :return:
         """
         _id = self.get_num_records(self.table) + 1
         return _id
 
-    def insert(self):
+    def insert(self, transaction):
         txn_id = self.generate_new_txn_id()
-        self.update_receivables(txn_id)
-        self.update_payables(txn_id)
-        self.update_income(txn_id)
-        self.update_expenses(txn_id)
+        payee = transaction.get('payee')
+        payer = transaction.get('payer')
+        txn_amount = transaction.get('txn_amount')
 
         item = {
             "pk": f"transactions#{txn_id}",
             "sk": f"TRANSACTIONS",
-            "payee": "",
-            "payer": "",
-            "txn_amount": "",
+            "txn_id": txn_id,
+            "payee": payee,
+            "payer": payer,
+            "txn_amount": Decimal(str(txn_amount)),
             "txn_date": datetime.utcnow().isoformat(),
         }
 
-    def update_receivables(self, txn_id):
-        """
-        Accounts Recievables
+        self.save(item)
+        return txn_id
 
-        - Customer Open Items
-        - Customer cleared items.
+    def get_all_txn_by_client(self, client_id):
+        logger.info(f"Search all TRANSACTIONS by Client ID: {client_id}...")
+        ke = Key('sk').eq('TRANSACTIONS')
+        fe = Attr('payer').eq(client_id)
+        pe = 'txn_id, payee, payer, txn_amount, txn_date'
+        data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
+        print(data)
+        return data
 
-        :param txn_id:
-        :return:
-        """
-        pass
+    def get_all_txn_on_date(self, txn_date):
+        logger.info(f"Search all TRANSACTIONS on date: {txn_date}...")
+        ke = Key('sk').eq('TRANSACTIONS')
+        fe = Attr('txn_date').eq(txn_date)
+        pe = 'txn_id, payee, payer, txn_amount, txn_date'
+        data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
+        print(data)
+        return data
 
-    def update_payables(self, txn_id):
-        """
-         - Vendor Open Items
-         - Vendor cleared items.
-        :param txn_id:
-        :return:
-        """
-        pass
-
-    def update_income(self, txn_id):
-        pass
-
-    def update_expenses(self, txn_id):
-        pass
+    def get_all_txn_bw_dates(self, start_date, end_date):
+        logger.info(f"Search all TRANSACTIONS between {start_date}-{end_date} ...")
+        ke = Key('sk').eq('TRANSACTIONS')
+        fe = Attr('txn_date').between(start_date, end_date)
+        pe = 'txn_id, payee, payer, txn_amount, txn_date'
+        data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
+        print(data)
+        return data
