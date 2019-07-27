@@ -103,6 +103,7 @@ class ValidateQuotation(ValidatePayload):
         assert isinstance(quotation.get('store_id'), int)
         assert isinstance(quotation.get('quotation_type'), str)
         assert isinstance(quotation.get('payment_type'), str)
+        assert isinstance(quotation.get('client_type'), str)
         assert isinstance(quotation.get('discount_on_total'), (int, float))  # and not isinstance(x, bool)
         assert isinstance(quotation.get('total_tax'), (int, float))
         assert isinstance(quotation.get('discounted_sub_total'), (int, float))
