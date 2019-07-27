@@ -22,19 +22,19 @@ class ReportModel(RetailModel):
         count = self.get_num_records(_type="ORDER")
         return count
 
-    def get_count_of_customers(self):
+    def get_count_of_clients(self):
         count = self.get_num_records(_type="CUSTOMER")
         return count
 
-    def get_count_of_platinum_customers(self):
+    def get_count_of_platinum_clients(self):
         count = self.get_num_records(_type="CUSTOMER")
         return count
 
-    def get_count_of_gold_customers(self):
+    def get_count_of_gold_clients(self):
         count = self.get_num_records(_type="CUSTOMER")
         return count
 
-    def get_count_of_silver_customers(self):
+    def get_count_of_silver_clients(self):
         count = self.get_num_records(_type="CUSTOMER")
         return count
 
