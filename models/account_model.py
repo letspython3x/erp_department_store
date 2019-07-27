@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from boto3.dynamodb.conditions import Key, Attr
-from decimal import Decimal
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -18,8 +16,8 @@ class AccountModel(RetailModel):
         """
         Accounts Recievables
 
-        - Customer Open Items
-        - Customer cleared items.
+        - Client Open Items
+        - Client cleared items.
 
         :param txn_id:
         :return:
