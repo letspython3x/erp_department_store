@@ -1,0 +1,5 @@
+.idea/
+init_db/
+models_old/
+utils/db_2.py
+*pycache*
