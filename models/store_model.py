@@ -1,5 +1,7 @@
 from datetime import datetime
-from boto3.dynamodb.conditions import Key, Attr
+
+from boto3.dynamodb.conditions import Key
+
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -9,13 +11,13 @@ logger = get_logger(__name__)
 
 class StoreModel(RetailModel):
     def __init__(self):
-        logger.info("Initializing Customer...")
+        logger.info("Initializing Store...")
         super(StoreModel, self).__init__()
         self.table = 'STORE'
 
     def generate_new_store_id(self):
         """
-        get the number of pk that starts with "STORE"
+        get the number of pk that starts with "store"
         :return:
         """
         _id = self.get_num_records(self.table) + 1
@@ -24,21 +26,20 @@ class StoreModel(RetailModel):
 
     def insert(self, store):
         store_id = self.generate_new_store_id()
-        store['store_id'] = store_id
         store_name = store.get('store_name')
         store_admin = store.get('store_admin')
-        address = store.get('address')
-        phone = store.get('phone')
         city = store.get('city')
         country = store.get('country')
         postal_code = store.get('postal_code')
+        address = store.get('address')
+        phone = store.get('phone')
 
         item = dict(
             pk=f"stores#{store_id}",
             sk="STORE",
-            data="store_name#category_id#store_admin"
+            data=f"{store_name}#{store_admin}#{country}#{city}",
+            store_id=store_id
         )
-
         item.update(store)
         already_existing_id = self.if_item_already_exists(item, sk='STORE')
         if already_existing_id:
@@ -52,27 +53,10 @@ class StoreModel(RetailModel):
         logger.info(f"Searching the Store by ID: {store_id}")
         return self.get_by_partition_key(val)
 
-
     def get_all_stores(self):
         response = self.model.query(
             IndexName='gsi_1',
-            KeyConditionExpression=Key('sk').eq('STORE') )
+            KeyConditionExpression=Key('sk').eq('STORE'))
         data = response['Items']
         data.sort(key=lambda item: item.get('store_name'))
         return data
-
-
-    @staticmethod
-    def reformat(store):
-        if isinstance(store, list):
-            for p in store:
-                p.pop("pk")
-                p.pop("sk")
-                p.pop("data")
-        elif isinstance(store, dict):
-            store.pop("pk")
-            store.pop("sk")
-            store.pop("data")
-        else:
-            return store
-        return store
