@@ -32,8 +32,10 @@ class Quotation(Resource):
         quotation_by_customer = None if customer_id == 0 else qm.search_by_customer_id(int(customer_id))
         quotation_by_employee = None if employee_id == 0 else qm.search_by_employee_id(int(employee_id))
         quotation_by_store = None if store_id == 0 else qm.search_by_store_id(int(store_id))
+        quotation_bw_dates = qm.search_between_dates(start_date, end_date)
 
-        data = dict(data=quotation or quotation_by_customer or quotation_by_employee or quotation_by_store)
+        data = dict(
+            data=quotation or quotation_by_customer or quotation_by_employee or quotation_by_store or quotation_bw_dates)
         payload = json.dumps(data, use_decimal=True)
         # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=200, mimetype="application/json")

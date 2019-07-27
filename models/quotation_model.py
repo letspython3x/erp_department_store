@@ -6,6 +6,7 @@ from boto3.dynamodb.conditions import Key, Attr
 from models.retail_model import RetailModel
 from models.store_model import StoreModel
 from models.customer_model import CustomerModel
+from models.product_model import ProductModel
 
 from utils.generic_utils import get_logger
 
@@ -37,7 +38,7 @@ class QuotationModel(RetailModel):
 
     @staticmethod
     def reformat(quotation):
-        logger.info(">>> Reformating the output")
+        logger.info(">>> Reformatting the output")
         metadata = quotation[0]
         store_id = metadata.get('store_id')
         customer_id = metadata.get('customer_id')
@@ -48,8 +49,7 @@ class QuotationModel(RetailModel):
             metadata=quotation[0],
             store=store,
             customer=customer,
-            line_items=quotation[1:]
-        )
+            line_items=quotation[1:])
 
         return new_quotation
 
@@ -78,7 +78,39 @@ class QuotationModel(RetailModel):
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         return data
 
+    def search_between_dates(self, start_date, end_date):
+        logger.info(f"Search all QUOTATION between dates {start_date} & {end_date}...")
+        ke = Key('sk').eq('ORDER')
+        e = Attr('created_at').between(start_date, end_date)
+        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
+        data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
+        return data
+
     def insert(self, quotation):
+        """
+        1. save quotation metadata
+        2. save line_items
+
+        If invoice: then just save it directly no changes to accounts or products
+        If bill:
+            Update (subtract) each products units_in_stock
+            Update (accounts) if payment_type - Credit then ADD Receivables
+            Update (accounts) if payment_type - Cash then ADD Income
+        :param quotation:
+        :return: order_id or quotation_id
+        """
+        quotation_type = quotation.get('quotation_type')
+        logger.info("Saving Quotation TYPE: %s" % quotation_type)
+        order_id = self.save_quotation_metadata(quotation)
+        self.save_line_items(order_id, quotation)
+
+        if quotation_type == 'Invoice':
+            logger.info("Update Products Quantity & Accounts as its a BILL")
+            self.update_products_quantity(quotation)
+            self.update_accounts(quotation)
+        return order_id
+
+    def save_quotation_metadata(self, quotation):
         customer_id = quotation.get('customer_id')
         employee_id = quotation.get('employee_id', 1)
         quotation_type = quotation.get('quotation_type')
@@ -88,8 +120,6 @@ class QuotationModel(RetailModel):
         discounted_sub_total = quotation.get('discounted_sub_total')
         quotation_total = quotation.get('quotation_total')
         store_id = quotation.get('store_id')
-
-        line_items = quotation.pop('item_rows', [])  # POP line items so they are not added to the ORDER
         order_date = datetime.utcnow().isoformat()
         order_id = self.generate_new_order_id()
         item = {
@@ -108,39 +138,52 @@ class QuotationModel(RetailModel):
             "quotation_total": Decimal(str(quotation_total)),
             "created_at": order_date,
         }
-
-        # item.update(quotation)
-        # print(item)
         self.save(item)
-
-        for line_item in line_items:
-            self.save_line_item(order_id, line_item)
+        logger.info("Quotation Metadata saved")
         return order_id
 
-    def save_line_item(self, order_id, line_item):
-        print("Line Item: ", line_item)
-        quantity = line_item.get('quantity')
-        item_discount = Decimal(str(line_item.get('item_discount')))
-        tax = Decimal(str(line_item.get('tax')))
-        line_item_total = Decimal(str(line_item.get('line_item_total')))
-        quoted_price = Decimal(str(line_item.get('quoted_price')))
-        category = line_item.get('category_name')
-        product_name = line_item.get('product_name')
+    def save_line_items(self, order_id, quotation):
+        line_items = quotation.get('item_rows', [])  # POP line items so they are not added to the ORDER
+        for line_item in line_items:
+            print("Line Item: ", line_item)
+            barcode_number = line_item.get('barcode_number', -999)
+            product_name = line_item.get('product_name')
+            category = line_item.get('category_name')
+            quantity = line_item.get('quantity')
+            quoted_price = Decimal(str(line_item.get('quoted_price')))
+            item_discount = Decimal(str(line_item.get('item_discount')))
+            tax = Decimal(str(line_item.get('tax')))
+            line_item_total = Decimal(str(line_item.get('line_item_total')))
+            item = {
+                "pk": f"{'orders'}#{order_id}",
+                "sk": f"{'product_name'}#{product_name}",
+                "data": f"{line_item_total}#{quantity}#{tax}#{item_discount}",
+                "barcode_number": barcode_number,
+                "product_name": product_name,
+                "category_name": category,
+                "quoted_price": quoted_price,
+                "quantity": quantity,
+                "tax": tax,
+                "item_discount": item_discount,
+                "line_item_total": line_item_total,
+            }
+            # item.update(line_item)
+            self.save(item)
+        logger.info("Line items saved")
 
-        # product_id = ProductModel().search_by_name(product_name).get('product_id', -999)
+    @staticmethod
+    def update_products_quantity(quotation):
+        pm = ProductModel()
+        line_items = quotation.get('item_rows', [])
+        for line_item in line_items:
+            barcode_number = line_item.get('barcode_number', -999)
+            product_name = line_item.get('product_name')
+            product = pm.search_by_barcode(barcode_number) or pm.search_by_name(product_name)
+            product_id = product.get('product_id')
+            quantity = line_item.get('quantity')
+            ProductModel().update_quantity_in_stocks(product_id, quantity, increase=False)
+        logger.info("Product quantities are updated")
 
-        item = {
-            "pk": f"{'orders'}#{order_id}",
-            "sk": f"{'product_name'}#{product_name}",
-            "data": f"{line_item_total}#{quantity}#{tax}#{item_discount}",
-            "product_name": product_name,
-            "line_item_total": line_item_total,
-            "tax": tax,
-            "item_discount": item_discount,
-            "quoted_price": quoted_price,
-            "category_name": category,
-            "quantity": quantity,
-        }
-        # item.update(line_item)
-        self.save(item)
-        print(item)
+    @staticmethod
+    def update_accounts(quotation):
+        pass
