@@ -5,7 +5,7 @@ from boto3.dynamodb.conditions import Key, Attr
 
 from models.retail_model import RetailModel
 from models.store_model import StoreModel
-from models.customer_model import CustomerModel
+from models.client_model import ClientModel
 from models.product_model import ProductModel
 
 from utils.generic_utils import get_logger
@@ -41,23 +41,23 @@ class QuotationModel(RetailModel):
         logger.info(">>> Reformatting the output")
         metadata = quotation[0]
         store_id = metadata.get('store_id')
-        customer_id = metadata.get('customer_id')
+        client_id = metadata.get('client_id')
         store = StoreModel().search_by_store_id(store_id)[0]
-        customer = CustomerModel().search_by_customer_id(customer_id)[0]
+        client = ClientModel().search_by_client_id(client_id)[0]
 
         new_quotation = dict(
             metadata=quotation[0],
             store=store,
-            customer=customer,
+            client=client,
             line_items=quotation[1:])
 
         return new_quotation
 
-    def search_by_customer_id(self, customer_id):
-        logger.info(f"Search all QUOTATION by Customer ID: {customer_id}...")
+    def search_by_client_id(self, client_id):
+        logger.info(f"Search all QUOTATION by Client ID: {client_id}...")
         ke = Key('sk').eq('ORDER')
-        fe = Attr('customer_id').eq(customer_id)
-        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
+        fe = Attr('client_id').eq(client_id)
+        pe = 'client_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         print(data)
         return data
@@ -66,7 +66,7 @@ class QuotationModel(RetailModel):
         logger.info(f"Search all QUOTATION by Employee ID: {employee_id}...")
         ke = Key('sk').eq('ORDER')
         fe = Attr('employee_id').eq(employee_id)
-        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
+        pe = 'client_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         return data
 
@@ -74,7 +74,7 @@ class QuotationModel(RetailModel):
         logger.info(f"Search all QUOTATION by Store ID: {store_id}...")
         ke = Key('sk').eq('ORDER')
         fe = Attr('store_id').eq(store_id)
-        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
+        pe = 'client_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         return data
 
@@ -82,7 +82,7 @@ class QuotationModel(RetailModel):
         logger.info(f"Search all QUOTATION between dates {start_date} & {end_date}...")
         ke = Key('sk').eq('ORDER')
         e = Attr('created_at').between(start_date, end_date)
-        pe = 'customer_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
+        pe = 'client_id, order_id, employee_id, store_id, quotation_type, payment_type, quotation_total, created_at'
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         return data
 
@@ -111,7 +111,7 @@ class QuotationModel(RetailModel):
         return order_id
 
     def save_quotation_metadata(self, quotation):
-        customer_id = quotation.get('customer_id')
+        client_id = quotation.get('client_id')
         employee_id = quotation.get('employee_id', 1)
         quotation_type = quotation.get('quotation_type')
         payment_type = quotation.get('payment_type')
@@ -125,9 +125,9 @@ class QuotationModel(RetailModel):
         item = {
             "pk": f"{'orders'}#{order_id}",
             "sk": f"ORDER",
-            "data": f"{order_date}#{employee_id}#{customer_id}",
+            "data": f"{order_date}#{employee_id}#{client_id}",
             "order_id": order_id,
-            "customer_id": customer_id,
+            "client_id": client_id,
             "employee_id": employee_id,
             "store_id": store_id,
             "quotation_type": quotation_type,

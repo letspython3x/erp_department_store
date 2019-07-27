@@ -19,7 +19,7 @@ quotation_model = api.model('Quotation', {'quotation_id': fields.Integer()})
 class QuotationApi(Resource):
     def get(self):
         quotation_id = request.args.get('quotation_id', 0)
-        customer_id = request.args.get('customer_id', 0)
+        client_id = request.args.get('client_id', 0)
         employee_id = request.args.get('employee_id', 0)
         store_id = request.args.get('store_id', 0)
         quotation_type = request.args.get('quotation_type')
@@ -29,13 +29,13 @@ class QuotationApi(Resource):
 
         qm = QuotationModel()
         quotation = None if quotation_id == 0 else qm.search_by_order_id(int(quotation_id))
-        quotation_by_customer = None if customer_id == 0 else qm.search_by_customer_id(int(customer_id))
+        quotation_by_client = None if client_id == 0 else qm.search_by_client_id(int(client_id))
         quotation_by_employee = None if employee_id == 0 else qm.search_by_employee_id(int(employee_id))
         quotation_by_store = None if store_id == 0 else qm.search_by_store_id(int(store_id))
         quotation_bw_dates = qm.search_between_dates(start_date, end_date)
 
         data = dict(
-            data=quotation or quotation_by_customer or quotation_by_employee or quotation_by_store or quotation_bw_dates)
+            data=quotation or quotation_by_client or quotation_by_employee or quotation_by_store or quotation_bw_dates)
         payload = json.dumps(data, use_decimal=True)
         # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=200, mimetype="application/json")

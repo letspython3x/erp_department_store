@@ -9,45 +9,57 @@ TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
-class CustomerModel(RetailModel):
+class ClientModel(RetailModel):
     def __init__(self):
-        logger.info("Initializing Customer...")
-        super(CustomerModel, self).__init__()
+        logger.info("Initializing Client...")
+        super(ClientModel, self).__init__()
         self.table = "CUSTOMER"
 
-    def generate_new_customer_id(self):
+    def generate_new_client_id(self):
         """
-        get the number of pk that starts with "customers"
+        get the number of pk that starts with "clients"
         :return:
         """
         _id = self.get_num_records(self.table) + 1
         return _id
 
-    def insert(self, customer):
-        customer_id = self.generate_new_customer_id()
-        customer['customer_id'] = customer_id
+    def insert(self, client):
+        client_id = self.generate_new_client_id()
+        client['client_id'] = client_id
 
-        primary_phone = customer.get("primary_phone")
-        email = customer.get("email")
-        country = customer.get("country", '')
-        state = customer.get("state")
+        primary_phone = client.get("primary_phone")
+        email = client.get("email")
+        country = client.get("country", '')
+        state = client.get("state")
+        first_name = client.get('first_name')
+        middle_name = client.get('middle_name', "#")
+        last_name = client.get('last_name')
+        client_type = client.get("client_type")
+        secondary_phone = client.get("secondary_phone")
+        fax = client.get("fax")
+        gender = client.get("gender")
+        is_active = client.get("is_active")
+        membership = client.get("membership")
+        postal_code = client.get("postal_code")
+        city = client.get("city")
+        address = client.get("address")
+        contact_title = client.get("contact_title")
 
         item = {
-            "pk": f"customers#{customer_id}",
+            "pk": f"clients#{client_id}",
             "sk": f"CUSTOMER",
             "data": f"{primary_phone}#{email}#{country}#{state}"
         }
-        item.update(customer)
+        item.update(client)
 
         if self.model.save(item):
-            return customer_id
+            return client_id
 
-    def search_by_customer_id(self, customer_id):
-        val = f"customers#{customer_id}"
-        logger.info(f"Searching the Customer by ID: {customer_id} ...")
-        customer = self.get_by_partition_key(val)
-        return customer
-
+    def search_by_client_id(self, client_id):
+        val = f"clients#{client_id}"
+        logger.info(f"Searching the Client by ID: {client_id} ...")
+        client = self.get_by_partition_key(val)
+        return client
 
     def search_by_email(self, email):
         logger.info("Searching by phone number: %s" % email)
@@ -55,8 +67,8 @@ class CustomerModel(RetailModel):
                                     KeyConditionExpression=Key('sk').eq('CUSTOMER'),
                                     FilterExpression=Attr('email').eq(email)
                                     )
-        customer = self.remove_db_col(response['Items'])
-        return customer
+        client = self.remove_db_col(response['Items'])
+        return client
 
     def search_by_phone(self, phone):
         logger.info("Searching by phone number: %s" % phone)
@@ -65,39 +77,39 @@ class CustomerModel(RetailModel):
                                     FilterExpression=Attr('primary_phone').eq(phone) or Attr('secondary_phone').eq(
                                         phone)
                                     )
-        customer = self.remove_db_col(response['Items'])
-        return customer
+        client = self.remove_db_col(response['Items'])
+        return client
 
     def search_by_name(self, first_name, last_name, middle_name='NULL'):
-        logger.info(f"Searching the Customer by Name: {first_name} {last_name} ...")
+        logger.info(f"Searching the Client by Name: {first_name} {last_name} ...")
         response = self.model.query(IndexName='gsi_1',
                                     KeyConditionExpression=Key('sk').eq('CUSTOMER'),
                                     FilterExpression=Attr('first_name').eq(first_name) and Attr('last_name').eq(
                                         last_name) and Attr('middle_name').eq(middle_name))
-        customer = self.remove_db_col(response['Items'])
-        return customer
+        client = self.remove_db_col(response['Items'])
+        return client
 
-    def get_recent_customers(self, limit):
+    def get_recent_clients(self, limit):
         logger.info("Limiting Query Results to %s" % limit)
         response = self.model.query(
             IndexName='gsi_1',
             KeyConditionExpression=Key('sk').eq('CUSTOMER'),
             FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
-        customers = self.remove_db_col(response['Items'])
-        return customers
+        clients = self.remove_db_col(response['Items'])
+        return clients
 
-    def delete_customer(self, customer_id):
+    def delete_client(self, client_id):
         """
-        Mark the customer as in active by SET is_active=0
-        :param customer_id:
+        Mark the client as in active by SET is_active=0
+        :param client_id:
         :return:
         """
-        key = {'pk': f"{'customers'}#{customer_id}", "sk": "CUSTOMER"}
+        key = {'pk': f"{'clients'}#{client_id}", "sk": "CUSTOMER"}
         UpdateExpression = "SET is_active=:is_active"
         ExpressionAttributeValues = {":is_active": 0}
         self.update(key, UpdateExpression, ExpressionAttributeValues)
-        return customer_id
+        return client_id
 
-    def update_customer(self, customer_id, customer):
+    def update_client(self, client_id, client):
         return 0

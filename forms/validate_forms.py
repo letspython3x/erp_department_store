@@ -55,6 +55,7 @@ class ValidateUser(ValidatePayload):
         middle_name = user.get('middle_name', "#")
         last_name = user.get('last_name')
         email = user.get("email")
+        client_type = user.get("client_type")
         primary_phone = user.get("primary_phone")
         secondary_phone = user.get("secondary_phone")
         fax = user.get("fax")
@@ -71,6 +72,7 @@ class ValidateUser(ValidatePayload):
         assert isinstance(first_name, str)
         assert isinstance(middle_name, str)
         assert isinstance(last_name, str)
+        assert isinstance(client_type, str)
         assert isinstance(contact_title, str)
         assert isinstance(is_active, bool)
         assert isinstance(gender, str)
@@ -99,7 +101,7 @@ class ValidateQuotation(ValidatePayload):
 
     @staticmethod
     def __validate(quotation):
-        assert isinstance(quotation.get('customer_id'), int)
+        assert isinstance(quotation.get('client_id'), int)
         assert isinstance(quotation.get('store_id'), int)
         assert isinstance(quotation.get('quotation_type'), str)
         assert isinstance(quotation.get('payment_type'), str)

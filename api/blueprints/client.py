@@ -2,31 +2,31 @@ import simplejson as json
 from flask import request, abort, Response
 from flask_restplus import Resource, Api
 
-from api import bp_customer, ValidateUser
-from models.customer_model import CustomerModel
+from api import bp_client, ValidateUser
+from models.client_model import ClientModel
 from utils.generic_utils import get_logger
 
 logger = get_logger(__name__)
-api = Api(bp_customer)
+api = Api(bp_client)
 
 
-class CustomerApi(Resource):
+class ClientApi(Resource):
     def get(self):
         status = 200
-        customer_id = request.args.get('customer_id', '')
+        client_id = request.args.get('client_id', '')
         phone = request.args.get('phone', '')
         email = request.args.get('email', '')
 
-        cm = CustomerModel()
-        print(customer_id)
-        if customer_id not in [None, 0, 'null', '']:
-            data = cm.search_by_customer_id(customer_id)
+        cm = ClientModel()
+        print(client_id)
+        if client_id not in [None, 0, 'null', '']:
+            data = cm.search_by_client_id(client_id)
         elif phone not in [None, 0, 'null', '']:
             data = cm.search_by_phone(phone)
         elif email not in [None, 0, 'null', '']:
             data = cm.search_by_email(email)
         else:
-            data = cm.get_recent_customers(limit=10)
+            data = cm.get_recent_clients(limit=10)
 
         payload = json.dumps(data)
         # logger.info("PAYLOAD SENT: %s" % payload)
@@ -36,18 +36,18 @@ class CustomerApi(Resource):
         status = 201
         if not request.json:
             abort(status)
-        customer = request.json
+        client = request.json
 
-        customer_id = None
-        vf = ValidateUser(customer)
+        client_id = None
+        vf = ValidateUser(client)
         if vf.validate():
-            cm = CustomerModel()
-            customer_id = cm.insert(customer)
-            message = "Customer added Successfully"
+            cm = ClientModel()
+            client_id = cm.insert(client)
+            message = "Client added Successfully"
         else:
-            message = "Invalid Customer details"
+            message = "Invalid Client details"
 
-        data = dict(customer_id=customer_id,
+        data = dict(client_id=client_id,
                     message=message)
 
         payload = json.dumps(data)
@@ -55,17 +55,17 @@ class CustomerApi(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
     def delete(self):
-        customer_id = request.args.get('customer_id')
+        client_id = request.args.get('client_id')
         status = 200
-        if customer_id:
-            cm = CustomerModel()
-            customer = cm.delete_customer(customer_id)
-            if customer:
-                data = dict(message=f"DELETE Customer SUCCESS, ID: {customer_id}")
+        if client_id:
+            cm = ClientModel()
+            client = cm.delete_client(client_id)
+            if client:
+                data = dict(message=f"DELETE Client SUCCESS, ID: {client_id}")
             else:
-                data = dict(message=f"DELETE Customer FAILURE, ID: {customer_id}")
+                data = dict(message=f"DELETE Client FAILURE, ID: {client_id}")
         else:
-            data = dict(message="Customer ID can't be empty")
+            data = dict(message="Client ID can't be empty")
             status = 404
 
         payload = json.dumps(data)
@@ -81,19 +81,19 @@ class CustomerApi(Resource):
         if not request.json:
             abort(403)
 
-        customer = request.json
-        customer_id = customer.get('customer_id')
+        client = request.json
+        client_id = client.get('client_id')
 
-        if customer_id:
-            pm = CustomerModel()
-            is_updated = pm.update_customer(customer_id, customer)
+        if client_id:
+            pm = ClientModel()
+            is_updated = pm.update_client(client_id, client)
             if is_updated:
                 status = 200
-                data = dict(message=f"UPDATE Customer SUCCESS, ID: {customer_id}")
+                data = dict(message=f"UPDATE Client SUCCESS, ID: {client_id}")
             else:
-                data = dict(message=f"UPDATE Customer FAILURE, ID: {customer_id}")
+                data = dict(message=f"UPDATE Client FAILURE, ID: {client_id}")
         else:
-            data = dict(message='Invalid Customer ID')
+            data = dict(message='Invalid Client ID')
 
         payload = json.dumps(data)
         # logger.info("PAYLOAD SENT: %s" % payload)
@@ -116,4 +116,4 @@ class CustomerApi(Resource):
 
 
 
-api.add_resource(CustomerApi, "/")
+api.add_resource(ClientApi, "/")

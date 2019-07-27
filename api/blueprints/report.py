@@ -17,7 +17,7 @@ class ReportApi(Resource):
         data = dict(
             products=rm.get_count_of_active_products(),
             orders=rm.get_count_of_current_month_orders(),
-            customers=rm.get_count_of_customers(),
+            clients=rm.get_count_of_clients(),
             revenue=rm.get_revenue_generated_current_month()
         )
 
