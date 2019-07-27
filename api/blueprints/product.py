@@ -111,7 +111,7 @@ class Product(Resource):
         print(quantity)
         if product_id and isinstance(quantity, int):
             pm = ProductModel()
-            units_in_stock = pm.update_quantity_in_stocks(product_id, quantity)
+            units_in_stock = pm.update_quantity_in_stocks(product_id, quantity, increase=True)
             status = 200
             data = dict(
                 product_id=product_id,
