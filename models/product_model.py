@@ -14,6 +14,18 @@ class ProductModel(RetailModel):
         super(ProductModel, self).__init__()
         self.table = 'PRODUCT'
 
+    def delete_product(self, product_id):
+        """
+        Mark the product as in active by SET is_active=0
+        :param product_id:
+        :return:
+        """
+        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        UpdateExpression = "SET is_active=:is_active"
+        ExpressionAttributeValues = {":is_active": 0}
+        self.update(key, UpdateExpression, ExpressionAttributeValues)
+        return product_id
+
     def generate_new_product_id(self):
         """
         get the number of pk that starts with "product"
@@ -22,6 +34,29 @@ class ProductModel(RetailModel):
         _id = self.get_num_records(self.table) + 1
         print(_id)
         return _id
+
+    def get_changed_elements(self, product_id, new_product):
+        ori_product = self.search_by_product_id(product_id)[0]
+        changes = {}
+        for key in new_product.keys():
+            if ori_product.get(key) and new_product.get(key) == ori_product.get(key):
+                changes[key] = ori_product.get(key)
+            else:
+                changes[key] = new_product.get(key)
+        # print("Changed : ", changes)
+        return changes
+
+    def get_recent_products(self, limit):
+        print(limit)
+        response = self.model.query(
+            IndexName='gsi_1',
+            KeyConditionExpression=Key('sk').eq('PRODUCT'),
+            FilterExpression=Attr('is_active').eq(1),
+            Limit=limit)
+
+        products = self.remove_db_col(response['Items'])
+        products.sort(key=lambda item: item.get('product_name'), reverse=False)
+        return products
 
     def insert(self, product):
         product_id = self.generate_new_product_id()
@@ -65,17 +100,19 @@ class ProductModel(RetailModel):
         data = response['Items']
         return data
 
-    def get_recent_products(self, limit):
-        print(limit)
-        response = self.model.query(
-            IndexName='gsi_1',
-            KeyConditionExpression=Key('sk').eq('PRODUCT'),
-            FilterExpression=Attr('is_active').eq(1),
-            Limit=limit)
+    def search_by_barcode(self, barcode_number):
+        logger.info("Searching by Barcode Number: %s" % barcode_number)
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('PRODUCT'),
+                                    FilterExpression=Attr('barcode_number').eq(barcode_number))
+        return (response['Items'])
 
-        products = self.remove_db_col(response['Items'])
-        products.sort(key=lambda item: item.get('product_name'), reverse=False)
-        return products
+    def search_by_serial_no(self, serial_no):
+        logger.info("Searching by Serial Number: %s" % serial_no)
+        response = self.model.query(IndexName='gsi_1',
+                                    KeyConditionExpression=Key('sk').eq('PRODUCT'),
+                                    FilterExpression=Attr('serial_no').eq(serial_no))
+        return response['Items']
 
     def update_product_item(self, product_id, product):
         print(self.get_by_partition_key(product_id))
@@ -99,47 +136,14 @@ class ProductModel(RetailModel):
 
         self.update(key, UpdateExpression[:-2], ExpressionAttributeValues)
 
-    def update_quantity_in_stocks(self, product_id, quantity):
+    def update_quantity_in_stocks(self, product_id, quantity, increase=False):
         key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
         self.search_by_product_id(product_id)
         UpdateExpression = "ADD units_in_stock :units_in_stock"
         ExpressionAttributeValues = {
-            ":units_in_stock": quantity
+            ":units_in_stock": quantity if increase else int('-' + str(quantity))
         }
         updated_data = self.update(key, UpdateExpression, ExpressionAttributeValues)
-        return updated_data["units_in_stock"]
-
-    def get_changed_elements(self, product_id, new_product):
-        ori_product = self.search_by_product_id(product_id)[0]
-        changes = {}
-        for key in new_product.keys():
-            if ori_product.get(key) and new_product.get(key) == ori_product.get(key):
-                changes[key] = ori_product.get(key)
-            else:
-                changes[key] = new_product.get(key)
-        # print("Changed : ", changes)
-        return changes
-
-    def search_by_serial_no(self, serial_no):
-        logger.info("Searching by Serial Number: %s" % serial_no)
-        response = self.model.query(IndexName='gsi_1',
-                                    KeyConditionExpression=Key('sk').eq('PRODUCT'),
-                                    FilterExpression=Attr('serial_no').eq(serial_no)
-                                    )
-        # print(response)
-        # print(len(response['Items']))
-        return (response['Items'])
-
-    def delete_product(self, product_id):
-        """
-        Mark the product as in active by SET is_active=0
-        :param product_id:
-        :return:
-        """
-        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
-        UpdateExpression = "SET is_active=:is_active"
-        ExpressionAttributeValues = {":is_active": 0}
-        self.update(key, UpdateExpression, ExpressionAttributeValues)
-        return product_id
-
-
+        quantity = updated_data["units_in_stock"]
+        logger.info(f"Quantity of Product : {product_id} is " + "increased" if increase else "decreased")
+        return quantity
