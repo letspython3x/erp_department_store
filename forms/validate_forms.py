@@ -89,29 +89,29 @@ class ValidateUser(ValidatePayload):
         return True
 
 
-class ValidateQuotation(ValidatePayload):
-    def __init__(self, quotation, **kw):
-        super(ValidateQuotation, self).__init__(**kw)
-        self.quotation = quotation
+class ValidateOrder(ValidatePayload):
+    def __init__(self, order, **kw):
+        super(ValidateOrder, self).__init__(**kw)
+        self.order = order
 
     def validate(self):
-        if self.quotation:
-            if isinstance(self.quotation, dict):
-                return self.__validate(self.quotation)
+        if self.order:
+            if isinstance(self.order, dict):
+                return self.__validate(self.order)
 
     @staticmethod
-    def __validate(quotation):
-        assert isinstance(quotation.get('client_id'), int)
-        assert isinstance(quotation.get('store_id'), int)
-        assert isinstance(quotation.get('quotation_type'), str)
-        assert isinstance(quotation.get('payment_type'), str)
-        assert isinstance(quotation.get('client_type'), str)
-        assert isinstance(quotation.get('discount_on_total'), (int, float))  # and not isinstance(x, bool)
-        assert isinstance(quotation.get('total_tax'), (int, float))
-        assert isinstance(quotation.get('discounted_sub_total'), (int, float))
-        assert isinstance(quotation.get('quotation_total'), (int, float))
-        assert isinstance(quotation.get('item_rows'), list)
-        line_items = quotation.get('item_rows', [])
+    def __validate(order):
+        assert isinstance(order.get('client_id'), int)
+        assert isinstance(order.get('store_id'), int)
+        assert isinstance(order.get('order_type'), str)
+        assert isinstance(order.get('payment_type'), str)
+        assert isinstance(order.get('client_type'), str)
+        assert isinstance(order.get('discount_on_total'), (int, float))  # and not isinstance(x, bool)
+        assert isinstance(order.get('total_tax'), (int, float))
+        assert isinstance(order.get('discounted_sub_total'), (int, float))
+        assert isinstance(order.get('order_total'), (int, float))
+        assert isinstance(order.get('item_rows'), list)
+        line_items = order.get('item_rows', [])
 
         for product in line_items:
             assert isinstance(product.get('product_name'), str)

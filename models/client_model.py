@@ -2,6 +2,7 @@ from datetime import datetime
 
 from boto3.dynamodb.conditions import Key, Attr
 
+from models.enums import ModelNameEnum
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -13,7 +14,7 @@ class ClientModel(RetailModel):
     def __init__(self):
         logger.info("Initializing Client...")
         super(ClientModel, self).__init__()
-        self.table = "CUSTOMER"
+        self.table = ModelNameEnum.CLIENT.value
 
     def generate_new_client_id(self):
         """
@@ -47,7 +48,7 @@ class ClientModel(RetailModel):
 
         item = {
             "pk": f"clients#{client_id}",
-            "sk": f"CUSTOMER",
+            "sk": f"CLIENT",
             "data": f"{primary_phone}#{email}#{country}#{state}"
         }
         item.update(client)
@@ -64,7 +65,7 @@ class ClientModel(RetailModel):
     def search_by_email(self, email):
         logger.info("Searching by phone number: %s" % email)
         response = self.model.query(IndexName='gsi_1',
-                                    KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+                                    KeyConditionExpression=Key('sk').eq('CLIENT'),
                                     FilterExpression=Attr('email').eq(email)
                                     )
         client = self.remove_db_col(response['Items'])
@@ -73,7 +74,7 @@ class ClientModel(RetailModel):
     def search_by_phone(self, phone):
         logger.info("Searching by phone number: %s" % phone)
         response = self.model.query(IndexName='gsi_1',
-                                    KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+                                    KeyConditionExpression=Key('sk').eq('CLIENT'),
                                     FilterExpression=Attr('primary_phone').eq(phone) or Attr('secondary_phone').eq(
                                         phone)
                                     )
@@ -83,7 +84,7 @@ class ClientModel(RetailModel):
     def search_by_name(self, first_name, last_name, middle_name='NULL'):
         logger.info(f"Searching the Client by Name: {first_name} {last_name} ...")
         response = self.model.query(IndexName='gsi_1',
-                                    KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+                                    KeyConditionExpression=Key('sk').eq('CLIENT'),
                                     FilterExpression=Attr('first_name').eq(first_name) and Attr('last_name').eq(
                                         last_name) and Attr('middle_name').eq(middle_name))
         client = self.remove_db_col(response['Items'])
@@ -93,7 +94,7 @@ class ClientModel(RetailModel):
         logger.info("Limiting Query Results to %s" % limit)
         response = self.model.query(
             IndexName='gsi_1',
-            KeyConditionExpression=Key('sk').eq('CUSTOMER'),
+            KeyConditionExpression=Key('sk').eq('CLIENT'),
             FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
         clients = self.remove_db_col(response['Items'])
@@ -105,7 +106,7 @@ class ClientModel(RetailModel):
         :param client_id:
         :return:
         """
-        key = {'pk': f"{'clients'}#{client_id}", "sk": "CUSTOMER"}
+        key = {'pk': f"{'clients'}#{client_id}", "sk": "CLIENT"}
         UpdateExpression = "SET is_active=:is_active"
         ExpressionAttributeValues = {":is_active": 0}
         self.update(key, UpdateExpression, ExpressionAttributeValues)

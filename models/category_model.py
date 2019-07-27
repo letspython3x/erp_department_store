@@ -1,6 +1,8 @@
 from datetime import datetime
 
 from boto3.dynamodb.conditions import Key, Attr
+
+from models.enums import ModelNameEnum
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -11,7 +13,7 @@ logger = get_logger(__name__)
 class CategoryModel(RetailModel):
     def __init__(self):
         super(CategoryModel, self).__init__()
-        self.table = 'CATEGORY'
+        self.table = ModelNameEnum.CATEGORY.value
 
     def generate_new_category_id(self):
         """

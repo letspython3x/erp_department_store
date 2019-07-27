@@ -2,6 +2,7 @@ from datetime import datetime
 
 from boto3.dynamodb.conditions import Key
 
+from models.enums import ModelNameEnum
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -13,7 +14,7 @@ class StoreModel(RetailModel):
     def __init__(self):
         logger.info("Initializing Store...")
         super(StoreModel, self).__init__()
-        self.table = 'STORE'
+        self.table = ModelNameEnum.STORE.value
 
     def generate_new_store_id(self):
         """

@@ -1,7 +1,5 @@
 from datetime import datetime
 
-from boto3.dynamodb.conditions import Key, Attr
-from decimal import Decimal
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -23,21 +21,20 @@ class ReportModel(RetailModel):
         return count
 
     def get_count_of_clients(self):
-        count = self.get_num_records(_type="CUSTOMER")
+        count = self.get_num_records(_type="CLIENT")
         return count
 
     def get_count_of_platinum_clients(self):
-        count = self.get_num_records(_type="CUSTOMER")
+        count = self.get_num_records(_type="CLIENT")
         return count
 
     def get_count_of_gold_clients(self):
-        count = self.get_num_records(_type="CUSTOMER")
+        count = self.get_num_records(_type="CLIENT")
         return count
 
     def get_count_of_silver_clients(self):
-        count = self.get_num_records(_type="CUSTOMER")
+        count = self.get_num_records(_type="CLIENT")
         return count
-
 
     @staticmethod
     def get_revenue_generated_current_month():

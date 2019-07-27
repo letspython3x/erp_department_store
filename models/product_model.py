@@ -1,7 +1,9 @@
 from datetime import datetime
+from decimal import Decimal
 
 from boto3.dynamodb.conditions import Key, Attr
-from decimal import Decimal
+
+from models.enums import ModelNameEnum
 from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
@@ -12,7 +14,7 @@ logger = get_logger(__name__)
 class ProductModel(RetailModel):
     def __init__(self):
         super(ProductModel, self).__init__()
-        self.table = 'PRODUCT'
+        self.table = ModelNameEnum.PRODUCT.value
 
     def delete_product(self, product_id):
         """
