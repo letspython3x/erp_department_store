@@ -30,7 +30,7 @@ api = Api(bp_store,
 #
 #
 # @api.route('/')
-class Store(Resource):
+class StoreApi(Resource):
     # @api.response(401, "Unauthorized")
     # @api.response(500, "Internal Server Error")
     # @api.doc(params={'store_id': 'An ID'})
@@ -80,4 +80,4 @@ class Store(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(Store, "/")
+api.add_resource(StoreApi, "/")

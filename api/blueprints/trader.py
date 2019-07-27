@@ -25,7 +25,7 @@ trader_res_model = api.model('traderResponse', {
 
 
 @api.route('/')
-class Trader(Resource):
+class TraderApi(Resource):
     @api.response(401, "Unauthorized")
     @api.response(500, "Internal Server Error")
     @api.doc(params={'trader_id': 'An ID'})
@@ -62,3 +62,6 @@ class Trader(Resource):
         data = dict(trader_id=tm.trader_id)
         logger.info("PAYLOAD SENT: %s" % data)
         return data
+
+
+api.add_resource(TraderApi, "/")

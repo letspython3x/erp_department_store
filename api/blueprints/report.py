@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 api = Api(bp_report)
 
 
-class Report(Resource):
+class ReportApi(Resource):
     def get(self):
         status = 200
         rm = ReportModel()
@@ -26,4 +26,4 @@ class Report(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(Report, "/")
+api.add_resource(ReportApi, "/")

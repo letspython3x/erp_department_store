@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 api = Api(bp_product)
 
 
-class Product(Resource):
+class ProductApi(Resource):
     def get(self):
         status = 200
         product_id = request.args.get('product_id', '')
@@ -122,4 +122,4 @@ class Product(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(Product, "/")
+api.add_resource(ProductApi, "/")

@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 api = Api(bp_customer)
 
 
-class Customer(Resource):
+class CustomerApi(Resource):
     def get(self):
         status = 200
         customer_id = request.args.get('customer_id', '')
@@ -86,7 +86,7 @@ class Customer(Resource):
 
         if customer_id:
             pm = CustomerModel()
-            is_updated = pm.update_product_item(customer_id, customer)
+            is_updated = pm.update_customer(customer_id, customer)
             if is_updated:
                 status = 200
                 data = dict(message=f"UPDATE Customer SUCCESS, ID: {customer_id}")
@@ -99,5 +99,21 @@ class Customer(Resource):
         # logger.info("PAYLOAD SENT: %s" % payload)
         return Response(payload, status=status, mimetype="application/json")
 
+    def patch(self):
+        logger.info("Update client accounts")
+        status = 400
+        if not request.json:
+            abort(403)
 
-api.add_resource(Customer, "/")
+        client = request.json
+        client_id = client.get('client_id')
+        amount = client.get('amount')
+
+        payload = json.dumps('Client account Update in progress')
+        # logger.info("PAYLOAD SENT: %s" % payload)
+        return Response(payload, status=status, mimetype="application/json")
+
+
+
+
+api.add_resource(CustomerApi, "/")

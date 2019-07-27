@@ -16,7 +16,7 @@ quotation_model = api.model('Quotation', {'quotation_id': fields.Integer()})
 
 
 # @api.route('/quotation')
-class Quotation(Resource):
+class QuotationApi(Resource):
     def get(self):
         quotation_id = request.args.get('quotation_id', 0)
         customer_id = request.args.get('customer_id', 0)
@@ -69,4 +69,4 @@ class Quotation(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(Quotation, "/")
+api.add_resource(QuotationApi, "/")

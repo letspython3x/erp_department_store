@@ -10,7 +10,7 @@ logger = get_logger(__name__)
 api = Api(bp_category)
 
 
-class Category(Resource):
+class CategoryApi(Resource):
     def get(self):
         status = 200
         category_id = request.args.get('category_id', '')
@@ -75,4 +75,4 @@ class Category(Resource):
         return Response(payload, status=status, mimetype="application/json")
 
 
-api.add_resource(Category, "/")
+api.add_resource(CategoryApi, "/")
