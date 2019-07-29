@@ -1,7 +1,16 @@
 from enum import Enum
 
 
+# class AccountTypeEnum(Enum):
+#     COMPANY = 'COMPANY'
+#     INDIVIDUAL = 'INDIVIDUAL'
+#     TRADER = 'TRADER'
+
+
 class ModelNameEnum(Enum):
+    """
+    Model Names are singular nouns
+    """
     ACCOUNT = 'ACCOUNT'
     CATEGORY = 'CATEGORY'
     CLIENT = 'CLIENT'
@@ -13,10 +22,18 @@ class ModelNameEnum(Enum):
     TRANSACTION = 'TRANSACTION'
 
 
+class OrderTypeEnum(Enum):
+    INVOICE = 'INVOICE'
+    QUOTATION = 'QUOTATION'
+
+
+class AccountTypeEnum(Enum):
+    PURCHASE = 'PURCHASE'
+    SALE = 'SALE'
+
+
 class TransactionTypeEnum(Enum):
+    CASH = 'CASH'
+    CREDIT = 'CREDIT'
     REFUND = 'REFUND'
     REVERSAL = 'REVERSAL'
-    BUY_CREDIT = 'BUY_CREDIT'
-    BUY_CASH = 'BUY_CASH'
-    SELL_CASH = 'SELL_CASH'
-    SELL_CREDIT = 'SELL_CREDIT'

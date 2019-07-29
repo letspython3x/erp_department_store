@@ -35,7 +35,8 @@ class ClientModel(RetailModel):
         first_name = client.get('first_name')
         middle_name = client.get('middle_name', "#")
         last_name = client.get('last_name')
-        client_type = client.get("client_type")
+        company_name = client.get("company_name") or f"{client.get('first_name')} {client.get('last_name')}"
+        entity_type = client.get("client_type")
         secondary_phone = client.get("secondary_phone")
         fax = client.get("fax")
         gender = client.get("gender")
@@ -44,12 +45,12 @@ class ClientModel(RetailModel):
         postal_code = client.get("postal_code")
         city = client.get("city")
         address = client.get("address")
-        contact_title = client.get("contact_title")
 
         item = {
             "pk": f"clients#{client_id}",
             "sk": f"CLIENT",
-            "data": f"{primary_phone}#{email}#{country}#{state}"
+            "data": f"{primary_phone}#{email}#{country}#{state}",
+            "entity_type": entity_type,
         }
         item.update(client)
 

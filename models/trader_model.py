@@ -29,23 +29,22 @@ class TraderModel(RetailModel):
         trader_id = self.generate_new_trader_id()
         primary_phone = trader.get("primary_phone")
         email = trader.get("email")
-        country = trader.get("country", '')
-        first_name = trader.get('first_name')
-        middle_name = trader.get('middle_name', "#")
-        last_name = trader.get('last_name')
+        city = trader.get('city')
+        country = trader.get("country")
+        company_name = trader.get('company_name')
+        contact_name = trader.get("contact_name")
         address = trader.get('address')
         phone = trader.get('phone')
-        city = trader.get('city')
         postal_code = trader.get('postal_code')
         secondary_phone = trader.get("secondary_phone")
         fax = trader.get("fax")
-        contact_title = trader.get("contact_title")
 
         item = dict(
             pk=f"traders#{trader_id}",
-            sk="TRADER",
+            sk=self.table,
             data=f"{primary_phone}#{email}#{country}#{city}",
-            trader_id=trader_id)
+            trader_id=trader_id,
+            entity_type=self.table)
 
         item.update(trader)
         already_existing_id = self.if_item_already_exists(item, sk='TRADER')

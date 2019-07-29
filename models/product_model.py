@@ -22,7 +22,7 @@ class ProductModel(RetailModel):
         :param product_id:
         :return:
         """
-        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        key = {'pk': f"{'products'}#{product_id}", "sk": self.table}
         UpdateExpression = "SET is_active=:is_active"
         ExpressionAttributeValues = {":is_active": 0}
         self.update(key, UpdateExpression, ExpressionAttributeValues)
@@ -49,10 +49,10 @@ class ProductModel(RetailModel):
         return changes
 
     def get_recent_products(self, limit):
-        print(limit)
+        print(">>> Fetch %d Recent Products" % limit)
         response = self.model.query(
             IndexName='gsi_1',
-            KeyConditionExpression=Key('sk').eq('PRODUCT'),
+            KeyConditionExpression=Key('sk').eq(self.table),
             FilterExpression=Attr('is_active').eq(1),
             Limit=limit)
 
@@ -75,12 +75,12 @@ class ProductModel(RetailModel):
 
         item = {
             "pk": f"{'products'}#{product_id}",
-            "sk": f"PRODUCT",
+            "sk": self.table,
             "data": f"{product_name}#{category_id}#{serial_no}#{is_active}"
         }
 
         item.update(product)
-        already_existing_id = self.if_item_already_exists(item, sk='PRODUCT')
+        already_existing_id = self.if_item_already_exists(item, sk=self.table)
         if already_existing_id:
             return already_existing_id
         else:
@@ -105,14 +105,14 @@ class ProductModel(RetailModel):
     def search_by_barcode(self, barcode_number):
         logger.info("Searching by Barcode Number: %s" % barcode_number)
         response = self.model.query(IndexName='gsi_1',
-                                    KeyConditionExpression=Key('sk').eq('PRODUCT'),
+                                    KeyConditionExpression=Key('sk').eq(self.table),
                                     FilterExpression=Attr('barcode_number').eq(barcode_number))
         return (response['Items'])
 
     def search_by_serial_no(self, serial_no):
         logger.info("Searching by Serial Number: %s" % serial_no)
         response = self.model.query(IndexName='gsi_1',
-                                    KeyConditionExpression=Key('sk').eq('PRODUCT'),
+                                    KeyConditionExpression=Key('sk').eq(self.table),
                                     FilterExpression=Attr('serial_no').eq(serial_no))
         return response['Items']
 
@@ -122,7 +122,7 @@ class ProductModel(RetailModel):
         product.pop('description')
         product.pop('sell_price')
         product.pop('unit_price')
-        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        key = {'pk': f"{'products'}#{product_id}", "sk": self.table}
         print("KEY : ", key)
         attribute_updates = self.get_changed_elements(product_id, product)
         # print("attribute_updates ", attribute_updates)
@@ -139,7 +139,7 @@ class ProductModel(RetailModel):
         self.update(key, UpdateExpression[:-2], ExpressionAttributeValues)
 
     def update_quantity_in_stocks(self, product_id, quantity, increase=False):
-        key = {'pk': f"{'products'}#{product_id}", "sk": "PRODUCT"}
+        key = {'pk': f"{'products'}#{product_id}", "sk": self.table}
         self.search_by_product_id(product_id)
         UpdateExpression = "ADD units_in_stock :units_in_stock"
         ExpressionAttributeValues = {

@@ -91,6 +91,7 @@ class RetailModel:
         :param item: item to save in model
         :return: bool
         """
+        # TODO: Check if the item is already existing with same ID
         try:
             self.model.put_item(Item=item)
             logger.info(f"Records Saved Successfully")
