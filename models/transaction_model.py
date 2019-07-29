@@ -3,7 +3,9 @@ from datetime import datetime
 from boto3.dynamodb.conditions import Key, Attr
 from decimal import Decimal
 from models.retail_model import RetailModel
+from models.account_model import AccountModel
 from utils.generic_utils import get_logger
+from models.enums import ModelNameEnum, TransactionTypeEnum, OrderTypeEnum, OrderSubTypeEnum
 
 TIMESTAMP = datetime.now
 logger = get_logger(__name__)
@@ -12,7 +14,7 @@ logger = get_logger(__name__)
 class TransactionModel(RetailModel):
     def __init__(self):
         super(TransactionModel, self).__init__()
-        self.table = 'TRANSACTIONS'
+        self.table = ModelNameEnum.TRANSACTION.value
 
     def generate_new_txn_id(self):
         """
@@ -23,23 +25,39 @@ class TransactionModel(RetailModel):
         return _id
 
     def insert(self, transaction):
-        txn_id = self.generate_new_txn_id()
-        payee = transaction.get('payee')
-        payer = transaction.get('payer')
-        txn_amount = transaction.get('txn_amount')
+        transaction_id = self.generate_new_txn_id()
+        payee_account_name = transaction.get('payee_account_name')
+        payer_account_name = transaction.get('payer_account_name')
+        transaction_amount = transaction.get('transaction_amount')
+
+        if transaction.get('order_type').upper() == OrderTypeEnum.INVOICE.value:
+            order_type = OrderTypeEnum.INVOICE.value
+
+        if transaction.get('order_sub_type').upper() == OrderSubTypeEnum.PURCHASE.value:
+            order_sub_type = OrderSubTypeEnum.PURCHASE.value
+        elif transaction.get('order_sub_type').upper() == OrderSubTypeEnum.SALE.value:
+            order_sub_type = OrderSubTypeEnum.SALE.value
+
+        if transaction.get('transaction_type').upper() == TransactionTypeEnum.CASH.value:
+            transaction_type = TransactionTypeEnum.CASH.value
+        elif transaction.get('transaction_type').upper() == TransactionTypeEnum.CREDIT.value:
+            transaction_type = TransactionTypeEnum.CREDIT.value
 
         item = {
-            "pk": f"transactions#{txn_id}",
-            "sk": f"TRANSACTIONS",
-            "txn_id": txn_id,
-            "payee": payee,
-            "payer": payer,
-            "txn_amount": Decimal(str(txn_amount)),
-            "txn_date": datetime.utcnow().isoformat(),
+            "pk": f"transactions#{transaction_id}",
+            "sk": self.table,
+            "transaction_id": transaction_id,
+            "payee_account_name": payee_account_name,
+            "payer_account_name": payer_account_name,
+            "transaction_amount": Decimal(str(transaction_amount)),
+            "transaction_date": datetime.utcnow().isoformat(),
+            "order_type": order_type,
+            "order_sub_type": order_sub_type,
+            "transaction_type": transaction_type
         }
-
         self.save(item)
-        return txn_id
+        AccountModel().update_account(item)
+        return transaction_id
 
     def get_all_txn_by_client(self, client_id):
         logger.info(f"Search all TRANSACTIONS by Client ID: {client_id}...")
@@ -67,3 +85,15 @@ class TransactionModel(RetailModel):
         data = self.query_records(index_name='gsi_1', ke=ke, fe=fe, pe=pe)
         print(data)
         return data
+
+    def get_recent_transactions(self, limit=10):
+        print(">>> Fetch %d Recent Transactions" % limit)
+        response = self.model.query(
+            IndexName='gsi_1',
+            KeyConditionExpression=Key('sk').eq(self.table),
+            # FilterExpression=Attr('is_active').eq(1),
+            Limit=limit)
+
+        transactions = self.remove_db_col(response['Items'])
+        transactions.sort(key=lambda item: item.get('txn_id'), reverse=False)
+        return transactions

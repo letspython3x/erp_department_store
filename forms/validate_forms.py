@@ -181,3 +181,23 @@ class ValidateCategory(ValidatePayload):
         assert isinstance(self.name, str)
         assert isinstance(self.description, str)
         return True
+
+
+class ValidateAccount(ValidatePayload):
+    def __init__(self, account, **kw):
+        super(ValidateAccount, self).__init__(**kw)
+        self.account = account
+
+    def validate(self):
+        if self.account:
+            if isinstance(self.account, dict):
+                return self.__validate(self.account)
+
+    @staticmethod
+    def __validate(account):
+        assert isinstance(account.get('account_type'), str)
+        assert isinstance(account.get('account_id'), int)
+        assert isinstance(account.get('account_name'), str)
+        assert isinstance(account.get('amount_paid'), (int, float))
+        assert isinstance(account.get('amount_due'), (int, float))
+        assert isinstance(account.get('account_created_at'), str)
