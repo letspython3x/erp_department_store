@@ -18,9 +18,9 @@ class TransactionApi(Resource):
         serial_no = request.args.get('serial_no', None)
 
         print(transaction_id)
-        pm = TransactionModel()
+        tm = TransactionModel()
         if transaction_id not in ['null', '']:
-            data = pm.search_by_transaction_id(int(transaction_id))
+            data = tm.search_by_transaction_id(int(transaction_id))
         elif name not in ['null', None, '']:
             data = pm.search_by_name(name)
         elif serial_no not in ['null', None, '']:
