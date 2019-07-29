@@ -2,11 +2,11 @@ from decimal import Decimal
 from datetime import datetime
 from boto3.dynamodb.conditions import Key, Attr
 from api import ValidateAccount
-from models.retail_model import RetailModel
-from models.transaction_model import TransactionModel
+from models import RetailModel
+
 from utils.generic_utils import get_logger
-from models.enums import ModelNameEnum, TransactionTypeEnum, AccountTypeEnum, OrderSubTypeEnum
-from utils.tool_exceptions import ValidateEntityTypeException
+from models.enums import ModelNameEnum, TransactionTypeEnum, AccountTypeEnum
+from utils.tool_exceptions import ValidateEntityTypeException, ValidatePaymentTypeException
 
 TIMESTAMP = datetime.utcnow().isoformat()
 logger = get_logger(__name__)
@@ -63,7 +63,7 @@ class AccountModel(RetailModel):
         return item
 
     def __create_trader_account(self, trader):
-        logger.info(">>> Creating a Trader Account")
+        logger.info(">>> Creating a Purchase Account")
         account_id = self.generate_new_account_id()
         account_name = trader.get('company_name')
         item = {
@@ -144,29 +144,3 @@ class AccountModel(RetailModel):
         # logger.info(f"Quantity of Product : {product_id} is " + "increased" if increase else "decreased")
         return quantity
 
-    def update_receivables(self, transaction):
-        """
-        Accounts Recievables
-
-        - Client Open Items
-        - Client cleared items.
-
-        :param txn_id:
-        :return:
-        """
-        txn_id = TransactionModel().insert(transaction)
-
-    def update_payables(self, transaction):
-        """
-         - Vendor Open Items
-         - Vendor cleared items.
-        :param txn_id:
-        :return:
-        """
-        txn_id = TransactionModel().insert(transaction)
-
-    def update_income(self, transaction):
-        txn_id = TransactionModel().insert(transaction)
-
-    def update_expenses(self, transaction):
-        txn_id = TransactionModel().insert(transaction)

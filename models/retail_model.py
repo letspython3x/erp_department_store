@@ -3,7 +3,7 @@ from datetime import datetime
 
 import simplejson as json
 from boto3 import resource
-from boto3.dynamodb.conditions import Key, Attr
+from boto3.dynamodb.conditions import Key
 from botocore.exceptions import ClientError
 
 from utils.generic_utils import get_logger, get_app_config

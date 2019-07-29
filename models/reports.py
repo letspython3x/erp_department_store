@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from models.retail_model import RetailModel
+from models import AccountModel, CategoryModel, ClientModel, DuesModel, OrderModel, ProductModel, SaleModel, StoreModel, \
+    TraderModel, TransactionModel
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now

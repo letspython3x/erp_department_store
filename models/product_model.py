@@ -3,8 +3,8 @@ from decimal import Decimal
 
 from boto3.dynamodb.conditions import Key, Attr
 
+from models import RetailModel
 from models.enums import ModelNameEnum
-from models.retail_model import RetailModel
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now

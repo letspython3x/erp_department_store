@@ -1,13 +1,10 @@
 from datetime import datetime
 from decimal import Decimal
-from models.enums import ModelNameEnum
+
 from boto3.dynamodb.conditions import Key, Attr
 
-from models.retail_model import RetailModel
-from models.store_model import StoreModel
-from models.client_model import ClientModel
-from models.product_model import ProductModel
-
+from models import RetailModel, StoreModel, ClientModel, ProductModel
+from models.enums import ModelNameEnum
 from utils.generic_utils import get_logger
 
 TIMESTAMP = datetime.now
