@@ -7,10 +7,9 @@ TIMESTAMP = datetime.now
 logger = get_logger(__name__)
 
 
-class ReportModel(RetailModel):
+class Reports():
     def __init__(self):
-        super(ReportModel, self).__init__()
-        # self.table = 'Report'
+        pass
 
     def get_count_of_active_products(self):
         count = self.get_num_records(_type="PRODUCT")

@@ -1,13 +1,12 @@
 from datetime import datetime
 
 from boto3.dynamodb.conditions import Key, Attr
-from decimal import Decimal
-from models.retail_model import RetailModel
-from models.account_model import AccountModel
-from utils.generic_utils import get_logger
-from models.enums import ModelNameEnum, TransactionTypeEnum, OrderTypeEnum, OrderSubTypeEnum
 
-TIMESTAMP = datetime.now
+from models import RetailModel
+from models.enums import ModelNameEnum, TransactionTypeEnum, AccountTypeEnum
+from utils.generic_utils import get_logger
+
+TIMESTAMP = datetime.utcnow().isoformat()
 logger = get_logger(__name__)
 
 
@@ -25,39 +24,29 @@ class TransactionModel(RetailModel):
         return _id
 
     def insert(self, transaction):
-        transaction_id = self.generate_new_txn_id()
-        payee_account_name = transaction.get('payee_account_name')
-        payer_account_name = transaction.get('payer_account_name')
-        transaction_amount = transaction.get('transaction_amount')
-
-        if transaction.get('order_type').upper() == OrderTypeEnum.INVOICE.value:
-            order_type = OrderTypeEnum.INVOICE.value
-
-        if transaction.get('order_sub_type').upper() == OrderSubTypeEnum.PURCHASE.value:
-            order_sub_type = OrderSubTypeEnum.PURCHASE.value
-        elif transaction.get('order_sub_type').upper() == OrderSubTypeEnum.SALE.value:
-            order_sub_type = OrderSubTypeEnum.SALE.value
-
-        if transaction.get('transaction_type').upper() == TransactionTypeEnum.CASH.value:
-            transaction_type = TransactionTypeEnum.CASH.value
-        elif transaction.get('transaction_type').upper() == TransactionTypeEnum.CREDIT.value:
-            transaction_type = TransactionTypeEnum.CREDIT.value
+        logger.info(">>> Inserting TRANSACTION")
+        txn_id = self.generate_new_txn_id()
+        order_id = 0
+        account_id = 0
+        store_id = 0
+        amount = 0
+        account_type = AccountTypeEnum.PURCHASE.value
+        transaction_type = TransactionTypeEnum.CREDIT.value or TransactionTypeEnum.DEBIT.value
 
         item = {
-            "pk": f"transactions#{transaction_id}",
+            "pk": f"transaction#{txn_id}",
             "sk": self.table,
-            "transaction_id": transaction_id,
-            "payee_account_name": payee_account_name,
-            "payer_account_name": payer_account_name,
-            "transaction_amount": Decimal(str(transaction_amount)),
-            "transaction_date": datetime.utcnow().isoformat(),
-            "order_type": order_type,
-            "order_sub_type": order_sub_type,
-            "transaction_type": transaction_type
+            "account_id": account_id,
+            "order_id": order_id,
+            "store_id": store_id,
+            "transaction_id": txn_id,
+            "transaction_type": transaction_type,
+            "transaction_datetime": TIMESTAMP,
+            "account_type": account_type,
+            "amount": amount,
         }
         self.save(item)
-        AccountModel().update_account(item)
-        return transaction_id
+        return txn_id
 
     def get_all_txn_by_client(self, client_id):
         logger.info(f"Search all TRANSACTIONS by Client ID: {client_id}...")
