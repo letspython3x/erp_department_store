@@ -1,0 +1,2 @@
+class ValidateEntityTypeException(Exception):
+    pass
